@@ -1,35 +1,13 @@
 import sys
-import pygame
-from pygame.mixer import music
-pygame.init()
+from os import path
+from src.Arcanum import Arcanum
 
-speed = [1, 1]
-color = 123, 123, 123
+if __name__ == "__main__":
 
-size = width, height = (1440, 900)
-screen = pygame.display.set_mode(size)
+    srcPath = path.dirname(sys.argv[0])
+    dataPath = path.join(srcPath, "GameData")
 
-ball = pygame.image.load("ball.gif")
-ballBorder = ball.get_rect()
+    arcanum = Arcanum(dataPath)
+    arcanum.Run()
 
-music.load("menu.wav")
-music.play(1)
-
-while 1:
-    for event in pygame.event.get():
-
-        if event.type == pygame.QUIT:
-            sys.exit()
-
-        if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
-            sys.exit()
-
-        ballBorder = ballBorder.move(speed)
-        if ballBorder.left < 0 or ballBorder.right > width:
-            speed[0] = -speed[0]
-        if ballBorder.top < 0 or ballBorder.bottom > height:
-            speed[1] = -speed[1]
-
-        screen.fill(color)
-        screen.blit(ball, ballBorder)
-        pygame.display.flip()
+    sys.exit()
