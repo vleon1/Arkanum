@@ -33,6 +33,12 @@ class Arcanum(object):
 
         pygame.init()
 
+        pygame.display.set_caption("Arcanum")
+
+        iconPath = self.GetFile("Arcanum.png")
+        icon = pygame.image.load(iconPath)
+        pygame.display.set_icon(icon)
+
         self.screen = pygame.display.set_mode(self.size)
 
     def HandleMenu(self):
@@ -58,41 +64,20 @@ class Arcanum(object):
 
     def HandleLoading(self):
 
-        # Start playing video while loading stuff
-        video =  self.PlayVideo("data/movies/SierraLogo.mpg")
-
         loadingThread = threading.Thread(target = self.Load)
         loadingThread.start()
 
+        # Start playing video while loading stuff
+        self.PlayVideo("data/movies/SierraLogo.mpg")
+        self.PlayVideo("data/movies/TroikaLogo.mpg")
+
+        # Show splash if still loading stuff and until it ends.
         splash = self.GetSplashScreen("data/art/splash")
+        self.RenderBackground(splash)
+        while loadingThread.is_alive():
+            pass
 
-        sierraLogoFinished = False
-        troikaLogoFinished = False
-        loadingFinished = False
-
-        while True:
-
-            if not sierraLogoFinished and not video.get_busy():
-                sierraLogoFinished = True
-                video = self.PlayVideo("data/movies/TroikaLogo.mpg")
-
-            if sierraLogoFinished and not troikaLogoFinished and not video.get_busy():
-                troikaLogoFinished = True
-                self.RenderBackground(splash)
-
-            if sierraLogoFinished and troikaLogoFinished and not loadingFinished and not loadingThread.is_alive():
-                loadingFinished = True
-                video = self.PlayVideo("modules/Arcanum/movies/50000.mpg")
-
-            if loadingFinished and not video.get_busy():
-                break
-
-            for event in pygame.event.get():
-
-                if event.type == pygame.MOUSEBUTTONUP or event.type == pygame.KEYUP:
-                    if video.get_busy():
-                        video.stop()
-                        pygame.mixer.music.stop()
+        self.PlayVideo("modules/Arcanum/movies/50000.mpg")
 
     def GetSplashScreen(self, splashesSubFolder):
 
@@ -141,4 +126,9 @@ class Arcanum(object):
         video.play()
         pygame.mixer.music.play()
 
-        return video
+        while video.get_busy():
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONUP or event.type == pygame.KEYUP:
+                    if video.get_busy():
+                        video.stop()
+                        pygame.mixer.music.stop()
