@@ -1,6 +1,6 @@
 import sys
 from os import path
-from src.Arcanum import Arcanum
+from src.pyRcanum import Arcanum
 
 if __name__ == "__main__":
 

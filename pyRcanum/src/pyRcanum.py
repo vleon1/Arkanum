@@ -33,7 +33,7 @@ class Arcanum(object):
 
         pygame.init()
 
-        pygame.display.set_caption("Arcanum")
+        pygame.display.set_caption("pyRcanum")
 
         iconPath = self.GetFile("Arcanum.png")
         icon = pygame.image.load(iconPath)
