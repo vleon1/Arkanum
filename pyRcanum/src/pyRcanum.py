@@ -7,6 +7,8 @@ import time
 
 import pygame
 import pygame.mixer
+import Tart
+
 
 class Arcanum(object):
 
@@ -16,6 +18,8 @@ class Arcanum(object):
 
         self.size = (1440, 900)
         self.screen = None
+
+        self.data = None
 
     def GetFile(self, relativePath):
 
@@ -35,9 +39,9 @@ class Arcanum(object):
 
         pygame.display.set_caption("pyRcanum")
 
-        iconPath = self.GetFile("Arcanum.png")
-        icon = pygame.image.load(iconPath)
-        pygame.display.set_icon(icon)
+        # iconPath = self.GetFile("Arcanum.png")
+        # icon = pygame.image.load(iconPath)
+        # pygame.display.set_icon(icon)
 
         self.screen = pygame.display.set_mode(self.size)
 
@@ -47,12 +51,16 @@ class Arcanum(object):
         pygame.mixer.music.load(menuMusicPath)
         pygame.mixer.music.play(-1)
 
-        menuImagePath = self.GetFile("data/art/interface/MainMenuBack.png")
-        menuImage = pygame.image.load(menuImagePath)
-        self.RenderBackground(menuImage)
+        # menuImagePath = self.GetFile("data/art/interface/MainMenuBack.png")
+        # menuImage = pygame.image.load(menuImagePath)
+        # self.RenderBackground(menuImage)
+
+        # Font in menu is Morph
 
         while 1:
             for event in pygame.event.get():
+
+                self.DrawCharacterAnimation(self.data, 0, 0)
 
                 if event.type == pygame.QUIT:
                     return
@@ -96,9 +104,21 @@ class Arcanum(object):
         self.screen.blit(background, position)
         pygame.display.flip()
 
+    def DrawCharacterAnimation(self, tartData, positionIndex, palletIndex):
+
+        for frameIndex in range(tartData.numberOfFrames):
+
+            tartImage = tartData.GetImage(positionIndex, frameIndex, palletIndex)
+
+            position = (tartImage.metaData.x, tartImage.metaData.y)
+
+            self.screen.fill((0,0,0))
+            self.screen.blit(tartImage.surface, position)
+            pygame.display.flip()
+
     def Load(self):
 
-        time.sleep(10)
+        self.data = Tart.Open(self.GetFile("data/art/critter/dfm/dfmbnsad.tart"))
 
     def CalculateCenterPosition(self, objectSize):
 
