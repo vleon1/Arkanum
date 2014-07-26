@@ -23,4 +23,4 @@ if __name__ == "__main__":
 
     basePath = sys.argv[1]
 
-    pyRcanumConverter.Convert(basePath)
+    pyRcanumConverter.ConvertFiles(basePath, removeOriginal = True)

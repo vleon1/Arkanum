@@ -1,5 +1,6 @@
 from os import  path
 from glob import glob
+import os
 
 from Converters.BikConvert import BikConverter
 from Converters.ArtConvert import ArtConverter
@@ -8,20 +9,28 @@ from Converters.ArtConvert import ArtConverter
 extensionToConverter = {".bik" : BikConverter, ".art" : ArtConverter}
 
 
-def Convert(basePath):
+def ConvertFiles(basePath, removeOriginal):
 
     for filePath in glob(path.join(basePath, "*")):
 
         if path.isdir(filePath):
 
-            Convert(filePath)
+            ConvertFiles(filePath, removeOriginal)
 
         else:
 
-            extension = path.splitext(filePath)[1].lower()
+            ConvertFile(filePath, removeOriginal)
 
-            if extension in extensionToConverter:
+def ConvertFile(filePath,removeOriginal):
 
-                converter = extensionToConverter[extension]
+    extension = path.splitext(filePath)[1].lower()
 
-                converter(filePath)
+    if extension in extensionToConverter:
+
+        converter = extensionToConverter[extension]
+
+        print("Converting: '%s'.." % filePath)
+        converter(filePath)
+
+        if removeOriginal:
+            os.remove(filePath)
