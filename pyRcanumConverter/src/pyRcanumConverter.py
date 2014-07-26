@@ -2,9 +2,10 @@ from os import  path
 from glob import glob
 
 from Converters.BikConvert import BikConverter
+from Converters.ArtConvert import ArtConverter
 
 
-extensionToConverter = {".bik" : BikConverter}
+extensionToConverter = {".bik" : BikConverter, ".art" : ArtConverter}
 
 
 def Convert(basePath):
@@ -17,7 +18,7 @@ def Convert(basePath):
 
         else:
 
-            extension = path.splitext(filePath)[1]
+            extension = path.splitext(filePath)[1].lower()
 
             if extension in extensionToConverter:
 
