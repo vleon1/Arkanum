@@ -13,9 +13,11 @@ class ImageInfo:
 
         self.dataSize = dataSize
 
+        # Center of image or offset relative to tile?
         self.x = x
         self.y = y
 
+        # Offset in animation? or offset relative to tile?
         self.dX = dX
         self.dY = dY
 
@@ -25,10 +27,10 @@ class ImageInfo:
 
         outputFile = StringIO()
 
-        outputFile.write("x=%s\n" % self.x)
-        outputFile.write("y=%s\n" % self.y)
-        outputFile.write("dX=%s\n" % self.dX)
-        outputFile.write("dY=%s" % self.dY)
+        outputFile.write("x=%d\n" % self.x)
+        outputFile.write("y=%d\n" % self.y)
+        outputFile.write("dX=%d\n" % self.dX)
+        outputFile.write("dY=%d" % self.dY)
 
         return outputFile
 

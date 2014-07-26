@@ -11,4 +11,3 @@ def ArtConverter(inputFilePath):
 
     imageData.Write(outputFilePath)
 
-    #os.remove(inputFilePath)

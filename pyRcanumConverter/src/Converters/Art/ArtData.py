@@ -1,5 +1,7 @@
 import os
 
+from cStringIO import StringIO
+
 import tarfile
 
 import Header
@@ -20,6 +22,17 @@ class ArtData(object):
         self.numberOfPositions = numberOfPositions
         self.numberOfFrames = numberOfFrames
 
+    def SaveHeaderData(self):
+
+        outputFile = StringIO()
+
+        outputFile.write("type=%d\n" % self.type)
+        outputFile.write("numberOfPositions=%d\n" % self.numberOfPositions)
+        outputFile.write("numberOfFrames=%d\n" % self.numberOfFrames)
+        outputFile.write("numberOfPallets=%d" % len(self.pallets))
+
+        return outputFile
+
     def GetImage(self, positionIndex, frameIndex):
 
         return self.images[positionIndex * self.numberOfFrames + frameIndex]
@@ -31,6 +44,9 @@ class ArtData(object):
     def Write(self, outputFilePath):
 
         with tarfile.open(outputFilePath, "w:bz2") as outputFile:
+
+            header = self.SaveHeaderData()
+            AddToTar(outputFile, header, name = "header.meta")
 
             for positionIndex in range(self.numberOfPositions):
                 for frameIndex in range(self.numberOfFrames):
@@ -68,9 +84,9 @@ def ReadArtData(inputFilePath):
 
     return ArtData(artType, pallets, images, imageInfos, numberOfPositions, numberOfFrames)
 
-def AddToTar(tarFile, fileObject, fileName):
+def AddToTar(tarFile, fileObject, name):
 
-    tarInfo = tarfile.TarInfo(name = fileName)
+    tarInfo = tarfile.TarInfo(name = name)
     tarInfo.size = GetFileSize(fileObject)
 
     tarFile.addfile(tarInfo, fileobj = fileObject)
