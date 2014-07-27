@@ -1,6 +1,4 @@
-import os
-
-from Art import ArtData
+from ConverterSrc.Converters.Art import ArtData
 
 
 def ArtConverter(inputFilePath):

@@ -1,6 +1,6 @@
 from struct import Struct
 
-import ArtType
+from ConverterSrc.Converters.Art import ArtType
 
 
 headerReader = Struct("<" + ("L" * 33))

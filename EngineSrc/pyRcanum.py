@@ -1,13 +1,12 @@
 from os import path
 from glob import glob
-
 import random
 import threading
-import time
 
 import pygame
 import pygame.mixer
-import Tart
+
+from EngineSrc import Tart
 
 
 class Arcanum(object):

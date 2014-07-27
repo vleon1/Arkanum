@@ -1,13 +1,12 @@
 import os
-
 from cStringIO import StringIO
-
 import tarfile
 
+from ConverterSrc.Converters.Art import ImageInfo
 import Header
 import Pallet
-import ImageInfo
 import Image
+
 
 class ArtData(object):
 

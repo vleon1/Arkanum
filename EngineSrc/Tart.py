@@ -3,13 +3,13 @@ import tarfile
 
 import pygame
 
-palletPixelReader = Struct("<" + "BBB" * 256)
+palletPixelReader = Struct("<BBB")
 
 class TartColorImage(pygame.Surface):
 
     def __init__(self, baseSurface, pallet, metaData):
 
-        #baseSurface.set_palette(pallet)
+        baseSurface.set_palette(pallet)
 
         self.surface = baseSurface.convert()
         self.metaData = metaData
@@ -76,8 +76,12 @@ def Open(tartFilePath):
         for palletIndex in range(numberOfPallets) :
 
             palletName = "%d.lut" % palletIndex
-            palletBuffer = tartFile.extractfile(palletName).read()
-            pallet = palletPixelReader.unpack_from(palletBuffer)
+
+            palletBuffer = tartFile.extractfile(palletName)
+
+            pallet =[]
+            for i in range(256):
+                pallet.append(palletPixelReader.unpack_from(palletBuffer.read(palletPixelReader.size)))
 
             pallets.append(pallet)
 

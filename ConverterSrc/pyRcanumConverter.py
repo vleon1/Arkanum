@@ -2,8 +2,8 @@ from os import  path
 from glob import glob
 import os
 
-from Converters.BikConvert import BikConverter
-from Converters.ArtConvert import ArtConverter
+from ConverterSrc.Converters.BikConvert import BikConverter
+from ConverterSrc.Converters.ArtConvert import ArtConverter
 
 
 extensionToConverter = {".bik" : BikConverter, ".art" : ArtConverter}
