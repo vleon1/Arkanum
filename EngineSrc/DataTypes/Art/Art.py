@@ -15,7 +15,14 @@ class Art(object):
         self.imageInfos = imageInfos
         self.imageDatas = imageDatas
 
+        self.images = map(lambda x: map(lambda y: None, self.pallets), self.imageInfos)
+
     def GetImage(self, palletIndex, positionIndex, frameIndex):
+
+        image = self.images[positionIndex * self.header.numberOfFrames + frameIndex][palletIndex]
+
+        if image:
+            return image
 
         imageData = self.imageDatas[positionIndex * self.header.numberOfFrames + frameIndex]
         imageInfo = self.imageInfos[positionIndex * self.header.numberOfFrames + frameIndex]
@@ -25,7 +32,9 @@ class Art(object):
         for pixel in imageData:
             imageBase.write(pallet[ord(pixel)])
 
-        return pygame.image.fromstring(imageBase.getvalue(), imageInfo.size, "RGBA").convert_alpha(), imageInfo
+        image = pygame.image.fromstring(imageBase.getvalue(), imageInfo.size, "RGBA").convert_alpha()
+        self.images[positionIndex * self.header.numberOfFrames + frameIndex][palletIndex] = image
+        return image
 
 def Read(inputFilePath):
 

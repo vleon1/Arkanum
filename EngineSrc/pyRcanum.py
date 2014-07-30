@@ -5,7 +5,7 @@ import threading
 
 import pygame
 import pygame.mixer
-import Graphics.Image
+from EngineSrc.DataTypes.Art import Art
 
 
 class Arcanum(object):
@@ -50,8 +50,8 @@ class Arcanum(object):
         pygame.mixer.music.play(-1)
 
         menuImagePath = self.GetFile("data/art/interface/MainMenuBack.art")
-        menuImage = Graphics.Image.LoadSingle(menuImagePath, 0)
-        self.RenderBackground(menuImage)
+        menuImageArt = Art.Read(menuImagePath)
+        self.RenderBackground(menuImageArt.GetImage(palletIndex = 0, positionIndex = 0, frameIndex = 0))
 
         # Font in menu is Morph
 
