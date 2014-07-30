@@ -1,18 +1,13 @@
 from cStringIO import StringIO
 
-from PIL import Image
-
 
 def Read(inputFile, imageInfo):
 
-    imageRawData = ReadRleData(inputFile, imageInfo) if imageInfo.isRLE else inputFile.read(imageInfo.size[0] * imageInfo.size[1])
+    isRLE = (imageInfo.dataSize != imageInfo.size[0] * imageInfo.size[1])
 
-    imageData = Image.frombytes("L", imageInfo.size, imageRawData)
+    imageData = ReadRleData(inputFile, imageInfo) if isRLE else inputFile.read(imageInfo.size[0] * imageInfo.size[1])
 
-    image = StringIO()
-    imageData.save(image, "PNG")
-
-    return image
+    return imageData
 
 def ReadRleData(inputFile, imageInfo):
 

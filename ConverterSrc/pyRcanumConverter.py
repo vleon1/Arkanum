@@ -3,10 +3,9 @@ from glob import glob
 import os
 
 from ConverterSrc.Converters.BikConvert import BikConverter
-from ConverterSrc.Converters.ArtConvert import ArtConverter
 
 
-extensionToConverter = {".bik" : BikConverter, ".art" : ArtConverter}
+extensionToConverter = {".bik" : BikConverter}
 
 
 def ConvertFiles(basePath, removeOriginal):

@@ -5,8 +5,7 @@ import threading
 
 import pygame
 import pygame.mixer
-
-from EngineSrc import Tart
+import Graphics.Image
 
 
 class Arcanum(object):
@@ -50,16 +49,14 @@ class Arcanum(object):
         pygame.mixer.music.load(menuMusicPath)
         pygame.mixer.music.play(-1)
 
-        # menuImagePath = self.GetFile("data/art/interface/MainMenuBack.png")
-        # menuImage = pygame.image.load(menuImagePath)
-        # self.RenderBackground(menuImage)
+        menuImagePath = self.GetFile("data/art/interface/MainMenuBack.art")
+        menuImage = Graphics.Image.LoadSingle(menuImagePath, 0)
+        self.RenderBackground(menuImage)
 
         # Font in menu is Morph
 
         while 1:
             for event in pygame.event.get():
-
-                self.DrawCharacterAnimation(self.data, 0, 0)
 
                 if event.type == pygame.QUIT:
                     return
@@ -103,21 +100,9 @@ class Arcanum(object):
         self.screen.blit(background, position)
         pygame.display.flip()
 
-    def DrawCharacterAnimation(self, tartData, positionIndex, palletIndex):
-
-        for frameIndex in range(tartData.numberOfFrames):
-
-            tartImage = tartData.GetImage(positionIndex, frameIndex, palletIndex)
-
-            position = (tartImage.metaData.x, tartImage.metaData.y)
-
-            self.screen.fill((0,0,0))
-            self.screen.blit(tartImage.surface, position)
-            pygame.display.flip()
-
     def Load(self):
 
-        self.data = Tart.Open(self.GetFile("data/art/critter/dfm/dfmbnsad.tart"))
+        pass
 
     def CalculateCenterPosition(self, objectSize):
 

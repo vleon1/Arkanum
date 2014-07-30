@@ -21,19 +21,6 @@ class ImageInfo:
         self.dX = dX
         self.dY = dY
 
-        self.isRLE = (dataSize != size[0] * size[1])
-
-    def SaveMetaData(self):
-
-        outputFile = StringIO()
-
-        outputFile.write("x=%d\n" % self.x)
-        outputFile.write("y=%d\n" % self.y)
-        outputFile.write("dX=%d\n" % self.dX)
-        outputFile.write("dY=%d" % self.dY)
-
-        return outputFile
-
 def Read(inputFile):
 
     imageInfoData = inputFile.read(imageInfoReader.size)
