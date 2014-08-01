@@ -6,10 +6,10 @@ from EngineSrc.pyRcanum import Arcanum
 
 if __name__ == "__main__":
 
-    srcPath = path.dirname(sys.argv[0])
-    dataPath = path.join(srcPath, r"GameData")
+    applicationPath = path.dirname(sys.argv[0])
+    configPath = sys.argv[1] if len(sys.argv) == 2 else path.join(applicationPath, "pyRcanum.ini")
 
-    arcanum = Arcanum(dataPath)
+    arcanum = Arcanum(configPath, applicationPath)
     arcanum.Run()
 
     sys.exit()

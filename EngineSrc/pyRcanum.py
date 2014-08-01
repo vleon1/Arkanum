@@ -1,70 +1,38 @@
-from os import path
-from glob import glob
-import random
 import threading
-
 import pygame
 import pygame.mixer
-from EngineSrc.DataTypes.Art import Art
+
+from Config import Config
+from EngineSrc.Data.Data import Data
+from EngineSrc.Engine.Menu import Menu
+from EngineSrc.Engine.Screen import Screen
 
 
 class Arcanum(object):
 
-    def __init__(self, dataPath):
+    def __init__(self, configPath, applicationPath):
 
-        self.dataPath = dataPath
+        intArguments = ["resolutionWidth", "resolutionHeight", "fullScreen"]
+        config = Config.Read(configPath, intArguments = intArguments)
 
-        self.size = (1440, 900)
-        self.screen = None
+        dataPath = config.dataPathTemplate.format(applicationPath = applicationPath)
+        self.data = Data(dataPath)
 
-        self.data = None
+        pygame.init()
+        pygame.display.set_caption("pyRcanum")
+        pygame.mouse.set_visible(False)
 
-    def GetFile(self, relativePath):
+        size = (config.resolutionWidth, config.resolutionHeight)
+        flags = pygame.FULLSCREEN if config.fullScreen else 0
+        self.screen = Screen(pygame.display.set_mode(size, flags))
 
-        return path.join(self.dataPath, relativePath)
+        self.menu = None
 
     def Run(self):
-
-        self.Prepare()
 
         self.HandleLoading()
 
         self.HandleMenu()
-
-    def Prepare(self):
-
-        pygame.init()
-
-        pygame.display.set_caption("pyRcanum")
-
-        # iconPath = self.GetFile("Arcanum.png")
-        # icon = pygame.image.load(iconPath)
-        # pygame.display.set_icon(icon)
-
-        self.screen = pygame.display.set_mode(self.size)
-
-    def HandleMenu(self):
-
-        menuMusicPath = self.GetFile("modules/Arcanum/sound/music/Arcanum.mp3")
-        pygame.mixer.music.load(menuMusicPath)
-        pygame.mixer.music.play(-1)
-
-        menuImagePath = self.GetFile("data/art/interface/MainMenuBack.art")
-        menuImageArt = Art.Read(menuImagePath)
-        self.RenderBackground(menuImageArt.GetImage(palletIndex = 0, positionIndex = 0, frameIndex = 0))
-
-        # Font in menu is Morph
-
-        while 1:
-            for event in pygame.event.get():
-
-                if event.type == pygame.QUIT:
-                    return
-
-                if event.type == pygame.KEYUP:
-
-                    if event.key == pygame.K_ESCAPE:
-                        return
 
     def HandleLoading(self):
 
@@ -72,67 +40,49 @@ class Arcanum(object):
         loadingThread.start()
 
         # Start playing video while loading stuff
-        self.PlayVideo("data/movies/SierraLogo.mpg")
-        self.PlayVideo("data/movies/TroikaLogo.mpg")
+        self.data.GetVideoFile("data/movies/SierraLogo.mpg").Render(self.screen)
+        self.data.GetVideoFile("data/movies/TroikaLogo.mpg").Render(self.screen)
 
         # Show splash if still loading stuff and until it ends.
-        splash = self.GetSplashScreen("data/art/splash")
-        self.RenderBackground(splash)
+        splash = self.data.GetSplashScreen("data/art/splash")
+        splash.Render(self.screen)
+
         while loadingThread.is_alive():
             pass
 
-        self.PlayVideo("modules/Arcanum/movies/50000.mpg")
-
-    def GetSplashScreen(self, splashesSubFolder):
-
-        splashesFolder = self.GetFile(splashesSubFolder)
-        splashPaths = glob(path.join(splashesFolder, "*.bmp"))
-
-        splashPath = random.choice(splashPaths)
-
-        return pygame.image.load(splashPath)
-
-    def RenderBackground(self, background):
-
-        position = self.CalculateCenterPosition(background.get_size())
-
-        self.screen.fill((0,0,0))
-        self.screen.blit(background, position)
-        pygame.display.flip()
+        self.data.GetVideoFile("modules/Arcanum/movies/50000.mpg").Render(self.screen)
 
     def Load(self):
 
-        pass
+        self.menu = Menu(self.data, self.screen)
 
-    def CalculateCenterPosition(self, objectSize):
+    def HandleMenu(self):
 
-        def CalculateCenterPositionOnAxis(containerValue, objectValue):
-            return (containerValue / 2) - (objectValue / 2) if objectValue < containerValue else 0
+        music = self.data.GetMusicFile("modules/Arcanum/sound/music/Arcanum.mp3")
+        music.Play()
 
-        objectXPosition = CalculateCenterPositionOnAxis(self.size[0], objectSize[0])
-        objectYPosition = CalculateCenterPositionOnAxis(self.size[1], objectSize[1])
+        cursor = self.data.GetArtFile("data/art/interface/cursor.art").Image().Texture()
 
-        return objectXPosition, objectYPosition
+        self.screen.StartRender()
+        self.menu.AddRender(self.screen, self.menu.startSentences)
+        self.screen.AddRender(cursor, pygame.mouse.get_pos())
+        self.screen.EndRender()
 
-    def PlayVideo(self, relativeVideoPath):
+        while 1:
 
-        videoPath = self.GetFile(relativeVideoPath)
+            event = pygame.event.poll()
 
-        video = pygame.movie.Movie(videoPath)
-        position = self.CalculateCenterPosition(video.get_size())
-        video.set_display(self.screen, position)
-        video.set_volume(0)
+            if event.type == pygame.QUIT:
+                return
 
-        pygame.mixer.music.load(videoPath)
+            if event.type == pygame.KEYUP:
 
-        self.screen.fill((0,0,0))
+                if event.key == pygame.K_ESCAPE:
+                    return
 
-        video.play()
-        pygame.mixer.music.play()
+            if event.type == pygame.MOUSEMOTION:
 
-        while video.get_busy():
-            for event in pygame.event.get():
-                if event.type == pygame.MOUSEBUTTONUP or event.type == pygame.KEYUP:
-                    if video.get_busy():
-                        video.stop()
-                        pygame.mixer.music.stop()
+                self.screen.StartRender()
+                self.menu.AddRender(self.screen, self.menu.startSentences)
+                self.screen.AddRender(cursor, event.pos)
+                self.screen.EndRender()
