@@ -5,7 +5,7 @@ import os
 from ConverterSrc.Converters.BikConvert import BikConverter
 
 
-extensionToConverter = {".bik" : BikConverter}
+extensionToConverter = {}
 
 
 def ConvertFiles(basePath, removeOriginal):
