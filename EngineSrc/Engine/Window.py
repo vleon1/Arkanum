@@ -1,11 +1,15 @@
 import pygame
+import pyglet
 
 
-class Screen(object):
+class Window(object):
 
-    def __init__(self, screen):
-        self.screen = screen
-        self.size = self.screen.get_size()
+    def __init__(self, resolutionWidth, resolutionHeight, fullScreen):
+
+        self.window = pyglet.window.Window(caption = "pyRcanum",
+                                           width = resolutionWidth, height = resolutionHeight) #, fullscreen = fullScreen)
+
+        self.size = self.window.get_size()
 
     def CalculateCenterPosition(self, objectSize):
 
@@ -18,10 +22,10 @@ class Screen(object):
         return objectXPosition, objectYPosition
 
     def StartRender(self):
-        self.screen.fill((0,0,0))
+        self.window.fill((0,0,0))
 
     def AddRender(self, texture, position):
-        self.screen.blit(texture, position)
+        self.window.blit(texture, position)
 
     def EndRender(self):
         pygame.display.flip()

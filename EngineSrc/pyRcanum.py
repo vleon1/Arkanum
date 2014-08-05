@@ -4,7 +4,7 @@ import pyglet
 from Config import Config
 from EngineSrc.Data.Data import Data
 # from EngineSrc.Engine.Menu import Menu
-# from EngineSrc.Engine.Screen import Screen
+from EngineSrc.Engine.Window import Window
 
 
 class Arcanum(object):
@@ -17,8 +17,7 @@ class Arcanum(object):
         dataPath = config.dataPathTemplate.format(applicationPath = applicationPath)
         self.data = Data(dataPath)
 
-        self.window = pyglet.window.Window(caption = "pyRcanum",
-                                           width = config.resolutionWidth, height = config.resolutionHeight) #, fullscreen = config.fullScreen)
+        self.window = Window(config.resolutionWidth, config.resolutionHeight, config.fullScreen)
 
         self.menu = None
 
@@ -34,14 +33,8 @@ class Arcanum(object):
         # loadingThread.start()
 
         # Start playing video while loading stuff
-        sierraLogoVideo = self.data.GetVideoFile("data/movies/SierraLogo.bik")
-        troikaLogoVideo = self.data.GetVideoFile("data/movies/TroikaLogo.bik")
-        player = pyglet.media.Player()
-        player.queue(sierraLogoVideo)
-        player.queue(troikaLogoVideo)
-        player.play()
-
-        self.window.set_handler("on_draw", lambda: player.get_texture().blit(0, 0))
+        self.data.GetVideoFile("data/movies/SierraLogo.bik").Render(self.window)
+        #self.data.GetVideoFile("data/movies/TroikaLogo.bik").Render(self.window)
 
         pyglet.app.run()
 
