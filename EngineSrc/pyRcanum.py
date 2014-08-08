@@ -33,8 +33,7 @@ class Arcanum(object):
         # loadingThread.start()
 
         # Start playing video while loading stuff
-        self.data.GetVideoFile("data/movies/SierraLogo.bik").Render(self.window)
-        #self.data.GetVideoFile("data/movies/TroikaLogo.bik").Render(self.window)
+        self.data.GetVideoFiles("data/movies/SierraLogo.bik", "data/movies/TroikaLogo.bik").Render(self.window)
 
         pyglet.app.run()
 

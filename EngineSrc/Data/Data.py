@@ -24,10 +24,10 @@ class Data(object):
 
         return Image.Read(splashPath)
 
-    def GetVideoFile(self, relativeFilePath):
+    def GetVideoFiles(self, *args):
 
-        filePath = self.GetFilePath(relativeFilePath)
-        return Video.Read(filePath)
+        filePaths = map(lambda x: self.GetFilePath(x), args)
+        return Video.Read(filePaths)
 
     def GetMusicFile(self, relativeFilePath):
 
