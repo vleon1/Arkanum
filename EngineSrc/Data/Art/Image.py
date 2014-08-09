@@ -1,8 +1,11 @@
 from cStringIO import StringIO
-import pygame
+from struct import Struct
+import pyglet
 
 
 class Image(object):
+
+    writer = Struct("<BBBB")
 
     def __init__(self, inputFile, info, pallet):
 
@@ -20,11 +23,16 @@ class Image(object):
 
         if not self.texture:
 
-            baseTexture = pygame.image.fromstring(self.data, self.info.size, "P")
-            baseTexture.set_colorkey(self.pallet.alphaColor)
-            baseTexture.set_palette(self.pallet.data)
+            data = StringIO()
 
-            self.texture = baseTexture.convert()
+            for row in range(self.info.size[1] - 1, 0 - 1, -1):
+                for column in range(self.info.size[0]):
+
+                    pixelIndex = self.data[row * self.info.size[0] + column]
+
+                    data.write(Image.writer.pack(*self.pallet.data[ord(pixelIndex)]))
+
+            self.texture = pyglet.image.ImageData(self.info.size[0], self.info.size[1], "RGBA", data.getvalue()).get_texture()
 
         return self.texture
 

@@ -9,7 +9,7 @@ from struct import Struct
 # [7] = action frame?
 # [8] = number of frames per angle. (type 0 and 2 have 8 angles, or others have 1)
 # [9:33] = ??
-from EngineSrc.Data.DataTypes.Art import Type
+import Type
 
 
 class Header(object):

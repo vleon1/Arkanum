@@ -7,16 +7,16 @@ class Pallet(object):
     def __init__(self, inputFile):
 
         self.data = [None] * 256
-        for i in range(0, 256):
-            self.data[i] = Pallet.ReadPalletPixel(inputFile)
 
-        self.alphaColor = self.data[0]
+        self.data[0] = Pallet.ReadPalletPixel(inputFile, alpha = 0)
+        for i in range(1, 256):
+            self.data[i] = Pallet.ReadPalletPixel(inputFile, alpha = 255)
 
     @staticmethod
-    def ReadPalletPixel(inputFile):
+    def ReadPalletPixel(inputFile, alpha):
 
         palletPixelData = inputFile.read(Pallet.reader.size)
 
         blue, green, red = Pallet.reader.unpack(palletPixelData)
 
-        return red, green, blue
+        return red, green, blue, alpha

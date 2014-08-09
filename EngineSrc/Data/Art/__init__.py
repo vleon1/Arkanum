@@ -1,10 +1,11 @@
-import pygame
-
-import Type
+import pyglet
 from Header import Header
 from Pallet import Pallet
 from ImageInfo import ImageInfo
 from Image import Image
+
+import Type
+
 
 class Art(object):
 
@@ -43,24 +44,19 @@ class FontArt(StaticArt):
     def __init__(self, inputFile, header):
         super(FontArt, self).__init__(inputFile, header)
 
-    def Sentence(self, sentence):
+    def GenerateSentence(self, batch, coordinates, sentence):
+
+        sprites = []
 
         characterImages = map(lambda character: self.Image(ord(character) - FontArt.ART_ASCII_OFFSET), sentence)
 
-        totalWidth = sum(map(lambda x: x.info.drawOffset[0], characterImages))
-        totalHeight = characterImages[1].info.drawOffset[1]
-
-        sentenceTexture = pygame.Surface((totalWidth, totalHeight))
-        sentenceTexture.set_colorkey((0, 0, 0))
-
-        currentPosition = [0 , 0]
         for characterImage in characterImages:
 
-            characterImage.Render(sentenceTexture, currentPosition)
+            sprites.append(pyglet.sprite.Sprite(characterImage.Texture(), coordinates[0], coordinates[1], batch = batch))
 
-            currentPosition[0] += characterImage.info.drawOffset[0]
+            coordinates[0] += characterImage.info.drawOffset[0]
 
-        return sentenceTexture
+        return sprites
 
 def Read(inputFilePath):
 

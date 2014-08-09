@@ -1,33 +1,47 @@
+import pyglet
+
+
 class Menu(object):
 
-    def __init__(self, data, screen):
+    def __init__(self, data, window):
 
-        self.menuTexture = data.GetArtFile("data/art/interface/MainMenuBack.art").Image().Texture()
-        self.menuPosition = screen.CalculateCenterPosition(self.menuTexture.get_size())
+        menuImage = data.GetArtFile("data/art/interface/MainMenuBack.art").Image()
+        menuPosition = window.CalculateCenterPosition(menuImage.info.size)
+        self.menuTexture = pyglet.sprite.Sprite(menuImage.Texture(), menuPosition[0], menuPosition[1])
 
         # Text positioning locations
-        self.menuStartLocationCenterX = self.menuPosition[0] + 412
-        self.menuStartLocationY = self.menuPosition[1] + 148
-        self.menuLocationOffsetY = 48
+        self.menuStartLocationCenterX = menuPosition[0] + 412
+        self.menuStartLocationY = menuPosition[1] + 600 - 148
+        self.menuLocationOffsetY = -48
 
         menuMes = data.GetMesFile("data/mes/MainMenu.mes")
-        fontArt = data.GetArtFile("data/art/interface/Morph30Font.art")
+        self.fontArt = data.GetArtFile("data/art/interface/Morph30Font.art")
 
         # Load start text
         startSentencesText = menuMes.lines[10: 10 + 5]
 
-        self.startSentences = map(lambda sentences: fontArt.Sentence(sentences), startSentencesText)
+        self.sprites = []
+        self.textBatch = self.GenerateTextBatch(startSentencesText)
 
-    def AddRender(self, screen, sentences):
+    def GenerateTextBatch(self, sentences):
 
-        screen.AddRender(self.menuTexture, self.menuPosition)
+        textBatch = pyglet.graphics.Batch()
 
         locationY = self.menuStartLocationY
 
         for sentence in sentences:
 
-            locationX = self.menuStartLocationCenterX - (sentence.get_size()[0] / 2)
+            locationX = self.menuStartLocationCenterX
 
-            screen.AddRender(sentence, (locationX, locationY))
+            self.sprites.append(self.fontArt.GenerateSentence(textBatch, [locationX, locationY], sentence))
 
             locationY += self.menuLocationOffsetY
+
+        return textBatch
+
+    def Render(self, window):
+
+        window.clear()
+
+        self.menuTexture.draw()
+        self.textBatch.draw()
