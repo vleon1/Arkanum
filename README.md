@@ -1,4 +1,4 @@
-pyRcanum
+Arkanum
 ========
 
 Arcanum game engine recreation

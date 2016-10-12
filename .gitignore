@@ -1,8 +1,4 @@
 *.pyc
 *.pyo
 
-.idea/workspace.xml
-
-GameData
-OtherData
-tools
+.idea
