@@ -13,7 +13,6 @@ class TerrainHeader(object):
     unknown1_format = "I"
     unknown2_format = "I"
 
-    # todo: Make sure that its not width then height :P
     sectors_height_format = "Q"
     sectors_width_format = "Q"
 
@@ -39,7 +38,7 @@ class TerrainHeader(object):
     @classmethod
     def read_from(cls, terrain_file_reader: io.BufferedReader) -> "TerrainHeader":
 
-        unknown1, unknown2, sectors_height, sectors_width, unknown3 = cls.parser.unpack_from(terrain_file_reader)
+        unknown1, unknown2, sectors_height, sectors_width, unknown3 = cls.parser.unpack_from_file(terrain_file_reader)
 
         return TerrainHeader(unknown1=unknown1, unknown2=unknown2,
                              sectors_height=sectors_height, sectors_width=sectors_width,
@@ -55,7 +54,7 @@ class Terrain(object):
 
         self.header = header
 
-        # todo: Check how many entries there are relative to sectors...
+        # todo: Assert that the number of entries is always equal to sectors_width
         self.number_of_unknown_entries = number_of_unknown_entries
 
     @classmethod
@@ -73,7 +72,7 @@ class Terrain(object):
 
                 number_of_unknown_entries += 1
 
-                unknown_entry_length = cls.unknown_entry_length_parser.unpack_from(terrain_file_reader)
+                unknown_entry_length, = cls.unknown_entry_length_parser.unpack_from_file(terrain_file_reader)
                 unknown_entry = terrain_file_reader.read(unknown_entry_length)
                 assert len(unknown_entry) == unknown_entry_length
 

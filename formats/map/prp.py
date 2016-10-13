@@ -7,15 +7,15 @@ class MapProperties(object):
     # The value seems to be the same as an 8bytes unknown in the terrain.tdf file
     # I checked and at least the first few arcanum maps (including the main one) have this value set as 2
     # todo: Validate that this unknowns is always the same value as the tdf unknown
+    # todo: group by this number, and see if its terrain type or something else
     unknown1_format = "I"
 
     # Different levels of same maps seem to have the same number, the main arcanum map is 1
     # todo: order by this number, and see if it makes sense..
     unknown2_format = "I"
 
-    # todo: Make sure that its not width then height :P
-    tiles_height_format = "Q"  # todo: Need to check if its always 64 * sectors_height (seems that not, see main map)
-    tiles_width_format = "Q"  # todo: Need to check if its always 64 * sectors_width (seems that not, see main map)
+    tiles_height_format = "Q"  # todo: Need to check if its always 64 * sectors_height
+    tiles_width_format = "Q"  # todo: Need to check if its always 64 * sectors_width
     full_format = "<" + unknown1_format + unknown2_format + tiles_height_format + tiles_width_format
 
     parser = FileStruct(full_format)
