@@ -19,8 +19,7 @@ class DatFooter(object):
 
     parser = FileStruct(full_format)
 
-    def __init__(self, guid: bytes, marker: bytes, file_names_size: int, footer_plus_entries_size: int,
-                 number_of_entries: int):
+    def __init__(self, guid: bytes, marker: bytes, file_names_size: int, footer_plus_entries_size: int):
 
         assert marker == self.Constants.marker
 
@@ -28,7 +27,13 @@ class DatFooter(object):
         self.file_names_size = file_names_size
         self.footer_plus_entries_size = footer_plus_entries_size
 
-        self.number_of_entries = number_of_entries
+    @classmethod
+    def read_from(cls, dat_file: io.FileIO) -> "DatFooter":
+
+        guid, marker, file_names_size, footer_plus_entries_size = DatFooter.parser.unpack_from_file(dat_file)
+
+        return DatFooter(guid=guid, marker=marker, file_names_size=file_names_size,
+                         footer_plus_entries_size=footer_plus_entries_size)
 
     @property
     def marker(self) -> str:
@@ -58,6 +63,13 @@ class DatEntry(object):
         self.compressed_size = compressed_size
         self.location = location
 
+    @classmethod
+    def read_from(cls, dat_file: io.FileIO) -> "DatEntry":
+
+        flags, full_size, compressed_size, location = DatEntry.parser.unpack_from_file(dat_file)
+
+        return DatEntry(flags=flags, full_size=full_size, compressed_size=compressed_size, location=location)
+
 
 class Dat(object):
 
@@ -79,14 +91,10 @@ class Dat(object):
 
         dat_file.seek(-DatFooter.parser.size, io.SEEK_END)
 
-        guid, marker, file_names_size, footer_plus_entries_size = DatFooter.parser.unpack_from_file(dat_file)
+        footer = DatFooter.read_from(dat_file)
 
-        dat_file.seek(-footer_plus_entries_size, io.SEEK_END)
-
+        dat_file.seek(-footer.footer_plus_entries_size, io.SEEK_END)
         number_of_entries, = cls.number_of_entries_parser.unpack_from_file(dat_file)
-
-        footer = DatFooter(guid=guid, marker=marker, file_names_size=file_names_size,
-                           footer_plus_entries_size=footer_plus_entries_size, number_of_entries=number_of_entries)
 
         name_to_entry = OrderedDict()  # type: Dict[str, DatEntry]
 
@@ -96,11 +104,7 @@ class Dat(object):
             file_name = dat_file.read(file_name_length - 1).decode()  # we don't want to save the last null
             dat_file.read(1)  # to skip the null byte
 
-            flags, full_size, compressed_size, location = DatEntry.parser.unpack_from_file(dat_file)
-            
-            entry = DatEntry(flags=flags, full_size=full_size, compressed_size=compressed_size, location=location)
-
-            name_to_entry[file_name] = entry
+            name_to_entry[file_name] = DatEntry.read_from(dat_file)
 
         return Dat(dat_file=dat_file, footer=footer, name_to_entry=name_to_entry)
 
