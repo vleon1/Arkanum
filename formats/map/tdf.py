@@ -17,63 +17,51 @@ class TerrainHeader(object):
         simple_descriptors = "simple descriptors"
         complex_descriptors = "complex descriptors"
 
-    # It might be more complex than that, but from 100% of the data i tested it was acting according to th
-    # DescriptorTypeHeader definition.
-    # Also the only file that has no descriptors (and thus has the unique no_descriptors type header) is in arcanum1.dat
-    # under 'terrain/tropical mountains/terrain.tdf'
-    descriptors_type_header_format = "I"
+        descriptors_header_to_type = {
+            0x03F8CCCCD : no_descriptors,
+            0x03F99999A: simple_descriptors,
+            0x13F99999A: complex_descriptors,
+        }
 
-    # It might be more complex than that, but from 100% of the data i tested it was acting like a boolean
-    # 1 for complex descriptors, zero if not.
-    has_complex_descriptors_format = "I"
+    # It might be more complex than that, but from 100% of the data i tested it was acting according to the
+    # DescriptorTypeHeader definition.
+    # Also the only file that has no descriptors is in 'arcanum1.dat' under 'terrain/tropical mountains/terrain.tdf'
+    descriptors_header_format = "Q"
 
     sectors_height_format = "Q"
     sectors_width_format = "Q"
 
-    # This is maybe the map type or something, seems to be the same as unknown1 in the prp file
-    # todo: validate if always the same as unknown1 in "map.prp"
-    unknown3_format = "Q"
+    # This is the original map type (The type of the tiles the map was created with), here it is saved in 8 bytes
+    # And in map.prp it is saved as 4 bytes as well for some reason.
+    # This value seems to have little impact (I didn't find yet what uses it, since so far everything i saw used data
+    # directly from the sectors descriptors)
+    # In 'arcanum1.dat' under 'terrain/forest to snowy plains' there is actually a mismatch with map.prp (That is
+    # the only one) so i assume that the value in the prp file is more important (since the tdf value is the wrong one).
+    # The values here fit the values in 'arcanum1.dat' under 'terrain/terrain.mes'
+    original_type_format = "Q"
 
-    full_format = "<" + descriptors_type_header_format + has_complex_descriptors_format + \
-                  sectors_height_format + sectors_width_format + unknown3_format
+    full_format = "<" + descriptors_header_format + sectors_height_format + sectors_width_format + original_type_format
 
     parser = FileStruct(full_format)
 
-    def __init__(self, descriptors_type_header: int, has_complex_descriptors: int,
-                 sectors_height: int, sectors_width: int, unknown3: int):
+    def __init__(self, descriptors_header: int, sectors_height: int, sectors_width: int, original_type: int):
 
-        bad_descriptors_info = False
-        if descriptors_type_header == self.DescriptorTypeHeader.simple_or_complex_descriptors:
-            if has_complex_descriptors == 1:
-                self.descriptors_type = self.DescriptorsType.complex_descriptors
-            elif has_complex_descriptors == 0:
-                self.descriptors_type = self.DescriptorsType.simple_descriptors
-            else:
-                bad_descriptors_info = True
-        elif descriptors_type_header == self.DescriptorTypeHeader.no_descriptors and has_complex_descriptors == 0:
-            self.descriptors_type = self.DescriptorsType.no_descriptors
-        else:
-            bad_descriptors_info = True
-
-        if bad_descriptors_info:
-            raise Exception("Unexpected descriptors_type_header %X or has_complex_descriptors value %d" %
-                            (descriptors_type_header, has_complex_descriptors))
+        self.descriptors_type = self.DescriptorsType.descriptors_header_to_type[descriptors_header]
 
         self.sectors_height = sectors_height
         self.sectors_width = sectors_width
 
-        self.unknown3 = unknown3
+        self.original_type = original_type
 
     @classmethod
     def read_from(cls, terrain_file_reader: io.FileIO) -> "TerrainHeader":
 
-        descriptors_type_header, has_complex_descriptors, sectors_height, sectors_width, unknown3 = \
+        descriptors_header, sectors_height, sectors_width, original_type = \
             cls.parser.unpack_from_file(terrain_file_reader)
 
-        return TerrainHeader(descriptors_type_header=descriptors_type_header,
-                             has_complex_descriptors=has_complex_descriptors,
+        return TerrainHeader(descriptors_header=descriptors_header,
                              sectors_height=sectors_height, sectors_width=sectors_width,
-                             unknown3=unknown3)
+                             original_type=original_type)
 
 
 # todo: figure this out...
@@ -92,7 +80,9 @@ class Terrain(object):
     simple_descriptor_parser = FileStruct("<2s")
     complex_descriptor_length_parser = FileStruct("<I")
 
-    def __init__(self, header: TerrainHeader, descriptors: List[Descriptor]):
+    def __init__(self, file_path: str, header: TerrainHeader, descriptors: List[Descriptor]):
+
+        self.file_path = file_path
 
         self.header = header
 
@@ -124,6 +114,7 @@ class Terrain(object):
                     descriptor_data = terrain_file.read(descriptor_length)
 
                     assert len(descriptor_data) == descriptor_length   # todo: remove me
+                    assert descriptor_data[:2] == b"\x78\xDA"  # todo: remove me
 
                     descriptor = Descriptor(data=descriptor_data)
 
@@ -131,4 +122,4 @@ class Terrain(object):
 
                 assert not terrain_file.read()  # todo: remove me
 
-        return Terrain(header=header, descriptors=descriptors)
+        return Terrain(file_path=terrain_file_path, header=header, descriptors=descriptors)

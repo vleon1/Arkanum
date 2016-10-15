@@ -36,6 +36,9 @@ from os import path
 from glob import glob
 
 from formats.map.tdf import Terrain
+from formats.map.prp import MapProperties
+
+from typing import Dict
 
 extension = ".tdf"
 validator_function = Terrain.read
@@ -46,7 +49,7 @@ base_paths = [r"C:\Work\ArkanumData",
               r"C:\Program Files (x86)\Arcanum"]
 
 
-validated_objects = dict()
+validated_objects = dict()  # type: Dict[str, Terrain]
 
 
 def validate_files(base_path):
@@ -72,4 +75,8 @@ print()
 for validated_object_path, validated_object in validated_objects.items():
 
     print("Further Validating %s.." % validated_object_path)
-    pass
+
+    validated_object_directory = path.dirname(validated_object_path)
+    properties_path = path.join(validated_object_directory, "map.prp")
+
+    map_properties = MapProperties.read(properties_path)
