@@ -1,7 +1,7 @@
 from formats.helpers import FileStruct
 import io
 import zlib
-from Collections import OrderedDict
+from collections import OrderedDict
 
 from typing import Dict, Iterable
 

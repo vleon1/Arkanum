@@ -1,65 +1,27 @@
-# import sys
-# from os import path
-# import os
-#
-# from formats.dat import Dat
-#
-# if __name__ == "__main__":
-#
-#     input_dat_path = sys.argv[1]
-#     base_output_folder = sys.argv[2]
-#     overwrite = bool(int(sys.argv[2])) if len(sys.argv) > 3 else False
-#
-#     dat = Dat.open(dat_file_path=input_dat_path)
-#
-#     for key in dat.keys():
-#
-#         output_path = path.join(base_output_folder, key)
-#         output_folder = path.dirname(output_path)
-#
-#         if not path.exists(output_folder):
-#             os.makedirs(output_folder)
-#
-#         output_data = dat[key]
-#         if not output_data:
-#             continue
-#
-#         if not overwrite and path.exists(output_path):
-#             continue
-#
-#         with open(output_path, "wb") as output_file:
-#             print("Writing '%s'..." % output_path)
-#             output_file.write(output_data)
-
-
 from os import path
 from glob import glob
+from collections import OrderedDict
 
 from formats.map.tdf import Terrain
 from formats.map.prp import MapProperties
 
 from typing import Dict
 
-extension = ".tdf"
-validator_function = Terrain.read
+extension = ".prp"
+validator_function = MapProperties.read
 
 
-base_paths = [r"C:\Work\ArkanumData",
-              r"C:\Users\vleon1\AppData\Local\VirtualStore\Program Files (x86)\Arcanum",
-              r"C:\Program Files (x86)\Arcanum"]
+base_path = r"D:\Games\Arcanum"
 
 
-validated_objects = dict()  # type: Dict[str, Terrain]
+def validate_files(directory, validated_objects):
 
-
-def validate_files(base_path):
-
-    template = path.join(base_path, "*")
+    template = path.join(directory, "*")
 
     for file_path in glob(template):
 
         if path.isdir(file_path):
-            validate_files(file_path)
+            validate_files(file_path, validated_objects)
 
         elif file_path.lower().endswith(extension):
             print("Validating %s.." % file_path)
@@ -67,16 +29,25 @@ def validate_files(base_path):
             validated_objects[file_path] = validated_object
 
 
-for base_path in base_paths:
-    validate_files(base_path)
+def main():
+
+    validated_objects = OrderedDict()  # type: Dict[str, MapProperties]
+
+    validate_files(base_path, validated_objects)
+
+    print()
+    for validated_object_path, validated_object in validated_objects.items():
+        print("Further Validating %s.." % validated_object_path)
+
+        assert path.basename(validated_object_path).lower() == "map.prp"
+
+        validated_object_directory = path.dirname(validated_object_path)
+        terrain_path = path.join(validated_object_directory, "terrain.tdf")
+
+        Terrain.read(terrain_path)
+
+    pass
 
 
-print()
-for validated_object_path, validated_object in validated_objects.items():
-
-    print("Further Validating %s.." % validated_object_path)
-
-    validated_object_directory = path.dirname(validated_object_path)
-    properties_path = path.join(validated_object_directory, "map.prp")
-
-    map_properties = MapProperties.read(properties_path)
+if __name__ == "__main__":
+    main()
