@@ -12,8 +12,16 @@ class MapProperties(object):
     # The values here fit the values in 'arcanum1.dat' under 'terrain/terrain.mes'
     original_type_format = "I"
 
-    # Different levels of same maps seem to have the same number, the main arcanum map is 1
-    # todo: order by this number, and see if it makes sense..
+    # This value seems to be related to windows restart or something that happens at restart.
+    # If you create all types of maps in the same windows session have the same number. (You can restart worldEd, logout
+    # and login as the same or another user, as long as you don't restart)
+    # Once restarted, i know that at least the second byte out of the four will change.
+    # This might be more that one parameter, or some weird set of flags that are affected by restarts, but it seems that
+    # changing them has no real effect on the map so i will ignore them for now.
+    #
+    # So far the value i had with custom maps are 0x770c0596, 0x77290596 and 0x77ae0596, and the number doesn't always
+    # go higher..
+    # todo: Check if at some point other bytes change as well,
     unknown1_format = "I"
 
     tiles_height_format = "Q"

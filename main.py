@@ -1,20 +1,20 @@
 from os import path
 from glob import glob
-from collections import OrderedDict
+from itertools import groupby
 
 from formats.map.tdf import Terrain
 from formats.map.prp import MapProperties
 
-from typing import Dict
+from typing import List
 
-extension = ".prp"
-validator_function = MapProperties.read
+extension = ".tdf"
+validator_function = Terrain.read
 
 
 base_path = r"D:\Games\Arcanum"
 
 
-def validate_files(directory, validated_objects):
+def validate_files(directory: str, validated_objects: List[Terrain]):
 
     template = path.join(directory, "*")
 
@@ -24,29 +24,16 @@ def validate_files(directory, validated_objects):
             validate_files(file_path, validated_objects)
 
         elif file_path.lower().endswith(extension):
-            print("Validating %s.." % file_path)
+            # print("Validating %s.." % file_path)
             validated_object = validator_function(file_path)
-            validated_objects[file_path] = validated_object
+            validated_objects.append(validated_object)
 
 
 def main():
 
-    validated_objects = OrderedDict()  # type: Dict[str, MapProperties]
+    validated_objects = []  # type: List[Terrain]
 
     validate_files(base_path, validated_objects)
-
-    print()
-    for validated_object_path, validated_object in validated_objects.items():
-        print("Further Validating %s.." % validated_object_path)
-
-        assert path.basename(validated_object_path).lower() == "map.prp"
-
-        validated_object_directory = path.dirname(validated_object_path)
-        terrain_path = path.join(validated_object_directory, "terrain.tdf")
-
-        Terrain.read(terrain_path)
-
-    pass
 
 
 if __name__ == "__main__":
