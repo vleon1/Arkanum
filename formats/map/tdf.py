@@ -1,30 +1,31 @@
 from formats.helpers import FileStruct
 
-from typing import List
+import zlib
 import io
+
+from typing import Dict, Tuple
+
+import numpy
 
 
 class TerrainHeader(object):
-
-    class DescriptorTypeHeader(object):
-
-        no_descriptors = 0x3F8CCCCD
-        simple_or_complex_descriptors = 0x3F99999A
 
     class DescriptorsType(object):
 
         no_descriptors = "no descriptors"
         simple_descriptors = "simple descriptors"
-        complex_descriptors = "complex descriptors"
+        compressed_descriptors = "compressed descriptors"
 
         descriptors_header_to_type = {
-            0x03F8CCCCD : no_descriptors,
+            0x03F8CCCCD: no_descriptors,
             0x03F99999A: simple_descriptors,
-            0x13F99999A: complex_descriptors,
+            0x13F99999A: compressed_descriptors,
         }
 
+        descriptors_type_to_header = {t: h for h, t in descriptors_header_to_type.items()}
+
     # It might be more complex than that, but from 100% of the data i tested it was acting according to the
-    # DescriptorTypeHeader definition.
+    # DescriptorsType definition.
     # Also the only file that has no descriptors is in 'arcanum1.dat' under 'terrain/tropical mountains/terrain.tdf'
     descriptors_header_format = "Q"
 
@@ -54,33 +55,65 @@ class TerrainHeader(object):
         self.original_type = original_type
 
     @classmethod
-    def read_from(cls, terrain_file_reader: io.FileIO) -> "TerrainHeader":
+    def read_from(cls, terrain_file: io.FileIO) -> "TerrainHeader":
 
         descriptors_header, sectors_height, sectors_width, original_type = \
-            cls.parser.unpack_from_file(terrain_file_reader)
+            cls.parser.unpack_from_file(terrain_file)
 
         return TerrainHeader(descriptors_header=descriptors_header,
                              sectors_height=sectors_height, sectors_width=sectors_width,
                              original_type=original_type)
 
+    def write_to(self, terrain_file: io.FileIO) -> None:
 
-# todo: figure this out...
+        if self.descriptors_type == self.DescriptorsType.no_descriptors:
+            output_descriptors_type = self.DescriptorsType.no_descriptors
+        else:
+            output_descriptors_type = self.DescriptorsType.simple_descriptors
+
+        descriptors_header = self.DescriptorsType.descriptors_type_to_header[output_descriptors_type]
+
+        header_data = self.parser.pack(descriptors_header, self.sectors_height, self.sectors_width, self.original_type)
+
+        terrain_file.write(header_data)
+
+
 class Descriptor(object):
 
-    def __init__(self, data: bytes):
-        self.data = data
+    # I don't know yet if the data is separated or together, and what it means.*[]
+    # todo: figure this out...
+    unknown1_format = "B"
+    unknown2_format = "B"
 
-    # todo: remove or update me
-    def __repr__(self):
-        return str(len(self.data))
+    full_format = "<" + unknown1_format + unknown2_format
+
+    parser = FileStruct(full_format)
+
+    def __init__(self, unknown1: int, unknown2: int):
+
+        self.unknown1 = unknown1
+        self.unknown2 = unknown2
+
+    @classmethod
+    def read_from(cls, terrain_file: io.BytesIO) -> "Descriptor":
+
+        unknown1, unknown2 = cls.parser.unpack_from_file(terrain_file)
+
+        return Descriptor(unknown1=unknown1, unknown2=unknown2)
+
+    def write_to(self, terrain_file: io.FileIO) -> None:
+
+        descriptor_data = self.parser.pack(self.unknown1, self.unknown2)
+
+        terrain_file.write(descriptor_data)
 
 
 class Terrain(object):
 
-    simple_descriptor_parser = FileStruct("<2s")
-    complex_descriptor_length_parser = FileStruct("<I")
+    descriptor_parser = FileStruct("<2s")
+    compressed_descriptors_length_parser = FileStruct("<I")
 
-    def __init__(self, file_path: str, header: TerrainHeader, descriptors: List[Descriptor]):
+    def __init__(self, file_path: str, header: TerrainHeader, descriptors: Dict[Tuple[int, int], Descriptor]):
 
         self.file_path = file_path
 
@@ -91,35 +124,51 @@ class Terrain(object):
     @classmethod
     def read(cls, terrain_file_path: str) -> "Terrain":
 
-        descriptors = []  # type: List[Descriptor]
-
         with open(terrain_file_path, "rb") as terrain_file:
 
             header = TerrainHeader.read_from(terrain_file)
 
-            if header.descriptors_type == TerrainHeader.DescriptorsType.simple_descriptors:
+            if header.descriptors_type == TerrainHeader.DescriptorsType.no_descriptors:
 
-                for _ in range(header.sectors_height * header.sectors_width):
+                descriptors = None
 
-                    descriptor_data, = cls.simple_descriptor_parser.unpack_from_file(terrain_file)
-                    descriptor = Descriptor(data=descriptor_data)
-                    descriptors.append(descriptor)
+            else:
 
-            elif header.descriptors_type == TerrainHeader.DescriptorsType.complex_descriptors:
+                if header.descriptors_type == TerrainHeader.DescriptorsType.simple_descriptors:
 
-                for _ in range(header.sectors_width):
+                    descriptors_raw = io.BytesIO(terrain_file.read())
 
-                    descriptor_length, = cls.complex_descriptor_length_parser.unpack_from_file(terrain_file)
+                else:
 
-                    descriptor_data = terrain_file.read(descriptor_length)
+                    descriptors_raw = io.BytesIO()
 
-                    assert len(descriptor_data) == descriptor_length   # todo: remove me
-                    assert descriptor_data[:2] == b"\x78\xDA"  # todo: remove me
+                    for _ in range(header.sectors_width):
+                        descriptors_raw_data_length, = cls.compressed_descriptors_length_parser.unpack_from_file(
+                            terrain_file)
 
-                    descriptor = Descriptor(data=descriptor_data)
+                        descriptors_raw_data = terrain_file.read(descriptors_raw_data_length)
 
-                    descriptors.append(descriptor)
+                        descriptors_data = zlib.decompress(descriptors_raw_data)
 
-                assert not terrain_file.read()  # todo: remove me
+                        descriptors_raw.write(descriptors_data)
+
+                    descriptors_raw.seek(0, io.SEEK_SET)
+
+                shape = (header.sectors_height, header.sectors_width)
+                descriptors = numpy.empty(shape=shape, dtype=object)  # type: Dict[Tuple[int, int], Descriptor]
+
+                for x in range(header.sectors_height):
+                    for y in range(header.sectors_width):
+                        descriptors[x, y] = Descriptor.read_from(descriptors_raw)
 
         return Terrain(file_path=terrain_file_path, header=header, descriptors=descriptors)
+
+    def write(self, terrain_file_path: str) -> None:
+
+        with open(terrain_file_path, "wb") as terrain_file:
+
+            self.header.write_to(terrain_file)
+
+            for x in range(self.header.sectors_height):
+                for y in range(self.header.sectors_width):
+                    self.descriptors[x, y].write_to(terrain_file)
