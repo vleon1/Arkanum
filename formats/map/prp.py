@@ -17,28 +17,28 @@ class MapProperties(object):
     # also change a bit each restart (Only the second byte) on the other the number is always consistent.
     stamp_format = "I"
 
-    tiles_height_format = "Q"
-    tiles_width_format = "Q"
-    full_format = "<" + original_type_format + stamp_format + tiles_height_format + tiles_width_format
+    tile_rows_format = "Q"
+    tile_cols_format = "Q"
+    full_format = "<" + original_type_format + stamp_format + tile_rows_format + tile_cols_format
 
     parser = FileStruct(full_format)
 
-    def __init__(self, file_path: str, original_type: int, stamp: int, tiles_height: int, tiles_width: int):
+    def __init__(self, file_path: str, original_type: int, stamp: int, tile_rows: int, tile_cols: int):
 
         self.file_path = file_path
 
         self.original_type = original_type
         self.stamp = stamp
-        self.tiles_height = tiles_height
-        self.tiles_width = tiles_width
+        self.tile_rows = tile_rows
+        self.tile_cols = tile_cols
 
     @classmethod
     def read(cls, map_properties_file_path: str) -> "MapProperties":
 
         with open(map_properties_file_path, "rb") as map_properties_file:
 
-            original_type, unknown1, tiles_height, tiles_width = cls.parser.unpack_from_file(map_properties_file)
+            original_type, stamp, tile_rows, tile_cols = cls.parser.unpack_from_file(map_properties_file)
 
         return MapProperties(file_path=map_properties_file_path,
-                             original_type=original_type, stamp=unknown1,
-                             tiles_height=tiles_height, tiles_width=tiles_width)
+                             original_type=original_type, stamp=stamp,
+                             tile_rows=tile_rows, tile_cols=tile_cols)
