@@ -74,6 +74,40 @@ class TerrainHeader(object):
 
 class Descriptor(object):
 
+    class Type(object):
+
+        broad_leaf_forest = 0x39C
+        deforested = 0x5AC
+        desert = 0x420
+        desert_island = 0x294
+        desert_mountains = 0x840
+        elven_forest = 0x528
+        forest = 0x210
+        green_grasslands = 0x000
+        mountains = 0x4A4
+        plains = 0x18C
+        scorched_earth = 0x7BC
+        snowy_mountains = 0x8C4
+        snowy_plains = 0x630
+        swamps = 0x084
+        tropical_jungle = 0x6B4
+        tropical_mountains = 0x948
+        void_mountains = 0x738
+        void_plains = 0x318
+        water = 0x108
+        green_grasslands_to_water = 0x008
+
+        # todo: remove me
+        base = [broad_leaf_forest, deforested, desert, desert_island, desert_mountains, elven_forest, forest,
+                green_grasslands, mountains, plains, scorched_earth, snowy_mountains, snowy_plains, swamps,
+                tropical_jungle, tropical_mountains, void_mountains, void_plains, water]
+
+        # todo: remove me
+        combined = [green_grasslands_to_water]
+
+        # todo: remove me
+        all = base + combined
+
     # I don't know yet if the data is separated or together, and what it means.*[]
     # todo: validate
     index_and_terrain_type_format = "H"
@@ -124,6 +158,14 @@ class Terrain(object):
     def rows(self) -> int:
         return self.header.sector_rows
 
+    @property
+    def has_descriptors(self) -> bool:
+        return self.header.descriptors_type != TerrainHeader.DescriptorsType.no_descriptors
+
+    @property
+    def has_compressed_descriptors(self) -> bool:
+        return self.header.descriptors_type == TerrainHeader.DescriptorsType.compressed_descriptors
+
     def __getitem__(self, row_col: Tuple[int, int]) -> Descriptor:
         """ Returns a descriptor of the requested sector """
 
@@ -169,6 +211,9 @@ class Terrain(object):
         with open(terrain_file_path, "wb") as terrain_file:
 
             self.header.write_to(terrain_file)
+
+            if not self.has_descriptors:
+                return
 
             for col in range(self.cols):
                 for row in range(self.rows):
