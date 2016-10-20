@@ -12,30 +12,23 @@ class MapProperties(object):
     # The values here fit the values in 'arcanum1.dat' under 'terrain/terrain.mes'
     original_type_format = "I"
 
-    # This value seems to be related to windows restart or something that happens at restart.
-    # If you create all types of maps in the same windows session have the same number. (You can restart worldEd, logout
-    # and login as the same or another user, as long as you don't restart)
-    # Once restarted, i know that at least the second byte out of the four will change.
-    # This might be more that one parameter, or some weird set of flags that are affected by restarts, but it seems that
-    # changing them has no real effect on the map so i will ignore them for now.
-    #
-    # So far the value i had with custom maps are 0x770c0596, 0x77290596 and 0x77ae0596, and the number doesn't always
-    # go higher..
-    # todo: Check if at some point other bytes change as well,
-    unknown1_format = "I"
+    # This seems to be some kind of a computer stamps, and it seems to only server as informational value.
+    # When creating maps with worldEd The whole value can change between computers, on one of my computers the value
+    # also change a bit each restart (Only the second byte) on the other the number is always consistent.
+    stamp_format = "I"
 
     tiles_height_format = "Q"
     tiles_width_format = "Q"
-    full_format = "<" + original_type_format + unknown1_format + tiles_height_format + tiles_width_format
+    full_format = "<" + original_type_format + stamp_format + tiles_height_format + tiles_width_format
 
     parser = FileStruct(full_format)
 
-    def __init__(self, file_path: str, original_type: int, unknown1: int, tiles_height: int, tiles_width: int):
+    def __init__(self, file_path: str, original_type: int, stamp: int, tiles_height: int, tiles_width: int):
 
         self.file_path = file_path
 
         self.original_type = original_type
-        self.unknown1 = unknown1
+        self.stamp = stamp
         self.tiles_height = tiles_height
         self.tiles_width = tiles_width
 
@@ -46,8 +39,6 @@ class MapProperties(object):
 
             original_type, unknown1, tiles_height, tiles_width = cls.parser.unpack_from_file(map_properties_file)
 
-            assert not map_properties_file.read()  # todo: remove me
-
         return MapProperties(file_path=map_properties_file_path,
-                             original_type=original_type, unknown1=unknown1,
+                             original_type=original_type, stamp=unknown1,
                              tiles_height=tiles_height, tiles_width=tiles_width)
