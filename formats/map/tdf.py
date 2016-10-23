@@ -8,7 +8,19 @@ from typing import Dict, Tuple, Union, Iterator
 import numpy
 
 
+# Used for type checking only
 NumpyMatrix = Union[Dict[Tuple[int, int], int], numpy.ndarray, None]
+
+
+"""
+An ordered tuple of terrains, the index fits the number used to describe that terrain type
+
+The indexes and names where taken from 'arcanum1.dat' under 'terrain/terrain.mes'
+"""
+terrain_types = ("green grasslands", "swamps", "water", "plains", "forest", "desert island", "void plains",
+                 "broad leaf forest", "desert", "mountains", "elven forest", "deforested", "snowy plains",
+                 "tropical jungle", "void mountains", "scorched earth", "desert mountains", "snowy mountains",
+                 "tropical mountains")
 
 
 class TerrainHeader(object):
@@ -74,40 +86,6 @@ class TerrainHeader(object):
 
 class Descriptor(object):
 
-    class Type(object):
-
-        broad_leaf_forest = 0x39C
-        deforested = 0x5AC
-        desert = 0x420
-        desert_island = 0x294
-        desert_mountains = 0x840
-        elven_forest = 0x528
-        forest = 0x210
-        green_grasslands = 0x000
-        mountains = 0x4A4
-        plains = 0x18C
-        scorched_earth = 0x7BC
-        snowy_mountains = 0x8C4
-        snowy_plains = 0x630
-        swamps = 0x084
-        tropical_jungle = 0x6B4
-        tropical_mountains = 0x948
-        void_mountains = 0x738
-        void_plains = 0x318
-        water = 0x108
-        green_grasslands_to_water = 0x008
-
-        # todo: remove me
-        base = [broad_leaf_forest, deforested, desert, desert_island, desert_mountains, elven_forest, forest,
-                green_grasslands, mountains, plains, scorched_earth, snowy_mountains, snowy_plains, swamps,
-                tropical_jungle, tropical_mountains, void_mountains, void_plains, water]
-
-        # todo: remove me
-        combined = [green_grasslands_to_water]
-
-        # todo: remove me
-        all = base + combined
-
     # I don't know yet if the data is separated or together, and what it means.*[]
     # todo: validate
     index_and_terrain_type_format = "H"
@@ -122,13 +100,23 @@ class Descriptor(object):
 
     @property
     def index(self) -> int:
-        """ The first 4 bits are the index of the sector to use from the base terrain """
-        return self.index_and_terrain_type & 0b1111
+        return self.index_and_terrain_type & 0b111111
 
     @property
-    def terrain_type(self) -> int:
-        """ The rest is the terrain type """  # todo: Validate
-        return self.index_and_terrain_type >> 4
+    def to_terrain_index(self) -> int:
+        return (self.index_and_terrain_type >> 6) & 0b11111
+
+    @property
+    def from_terrain_index(self) -> int:
+        return (self.index_and_terrain_type >> 11) & 0b11111
+
+    @property
+    def to_terrain(self) -> str:
+        return terrain_types[self.to_terrain_index]
+
+    @property
+    def from_terrain(self) -> str:
+        return terrain_types[self.from_terrain_index]
 
     def write_to(self, terrain_file: io.FileIO) -> None:
 

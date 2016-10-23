@@ -1,0 +1,56 @@
+The pattern (D = Double Use, S = Single Use, X = No Use):
+D X X
+D S D
+S X S
+D S D
+
+grass to water
+
+0x0 = 00 : 0101, 1010 ? (For some reason the two are not 100% the same, but there is only one terrain)
+1x0 = 01 : 0001, 1110
+2x0 = 02 : 1001, ----
+3x0 = 03 : 1000, 0111
+
+0x1 = 04 : XX
+1x1 = 05 : 0011, ----
+2x1 = 06 : XX
+3x1 = 07 : 1100, ----
+
+0x2 = 08 : XX
+1x2 = 09 : 0010, 1101
+2x2 = 10 : 0110, ----
+3x2 = 11 : 0100, 1011
+
+water to grass
+
+0x0 = 00 : 1010, 0101
+1x0 = 01 : 1110, 0001
+2x0 = 02 : ----, 1001
+3x0 = 03 : 0111, 1000
+
+0x1 = 04 : XX
+1x1 = 05 : ----, 0011
+2x1 = 06 : XX
+3x1 = 07 : ----, 1100
+
+0x2 = 08 : XX
+1x2 = 09 : 1101, 0010
+2x2 = 10 : ----, 0110
+3x2 = 11 : 1011, 0100
+
+desert island to water
+
+0x0 = 00 : 0101, 1010 ? (I assume because the main map had no such terrain)
+1x0 = 01 : 0001, 
+2x0 = 02 : 1001, 
+3x0 = 03 : 1000, 
+
+0x1 = 04 : XX
+1x1 = 05 : 0011, 
+2x1 = 06 : XX
+3x1 = 07 : 1100, 
+
+0x2 = 08 : XX
+1x2 = 09 : 0010, 
+2x2 = 10 : 0110, 
+3x2 = 11 : 0100, 
