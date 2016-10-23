@@ -17,44 +17,65 @@ An ordered tuple of terrains, the index fits the number used to describe that te
 
 The indexes and names where taken from 'arcanum1.dat' under 'terrain/terrain.mes'
 """
-terrain_types = ("green grasslands", "swamps", "water", "plains", "forest", "desert island", "void plains",
-                 "broad leaf forest", "desert", "mountains", "elven forest", "deforested", "snowy plains",
-                 "tropical jungle", "void mountains", "scorched earth", "desert mountains", "snowy mountains",
-                 "tropical mountains")
+terrain_index_to_name = (
+    "green grasslands",    # 00
+    "swamps",              # 01
+    "water",               # 02
+    "plains",              # 03
+    "forest",              # 04
+    "desert island",       # 05
+    "void plains",         # 06
+    "broad leaf forest",   # 07
+    "desert",              # 08
+    "mountains",           # 09
+    "elven forest",        # 10
+    "deforested",          # 11
+    "snowy plains",        # 12
+    "tropical jungle",     # 13
+    "void mountains",      # 14
+    "scorched earth",      # 15
+    "desert mountains",    # 16
+    "snowy mountains",     # 17
+    "tropical mountains",  # 18
+)
 
 
 class TerrainHeader(object):
 
-    class DescriptorsType(object):
+    class SectorPointersType(object):
 
-        no_descriptors = 0x03F8CCCCD
-        simple_descriptors = 0x03F99999A
-        compressed_descriptors = 0x13F99999A
+        no_pointers = 0x03F8CCCCD
+        simple_pointers = 0x03F99999A
+        compressed_pointers = 0x13F99999A
 
-    # It might be more complex than that, but from 100% of the data i tested it was acting according to the
-    # DescriptorsType definition.
-    # Also the only file that has no descriptors is in 'arcanum1.dat' under 'terrain/tropical mountains/terrain.tdf'
-    descriptors_header_format = "Q"
+    """
+    It might be more complex than that, but from 100% of the data i tested it was acting according to the
+    SectorPointersType definition.
+    Also the only file that has no pointers is in 'arcanum1.dat' under 'terrain/tropical mountains/terrain.tdf'
+    """
+    sector_pointers_type_format = "Q"
 
     sector_rows_format = "Q"
     sector_cols_format = "Q"
 
-    # This is the original map type (The type of the tiles the map was created with), here it is saved in 8 bytes
-    # And in map.prp it is saved as 4 bytes as well for some reason.
-    # This value seems to have little impact (I didn't find yet what uses it, since so far everything i saw used data
-    # directly from the sectors descriptors)
-    # In 'arcanum1.dat' under 'terrain/forest to snowy plains' there is actually a mismatch with map.prp (That is
-    # the only one) so i assume that the value in the prp file is more important (since the tdf value is the wrong one).
-    # The values here fit the values in 'arcanum1.dat' under 'terrain/terrain.mes'
+    """
+    This is the original map type (The type of the tiles the map was created with), here it is saved in 8 bytes
+    And in map.prp it is saved as 4 bytes as well for some reason.
+    This value seems to have little impact (I didn't find yet what uses it, since so far everything i saw used data
+    directly from the sectors pointers)
+    In 'arcanum1.dat' under 'terrain/forest to snowy plains' there is actually a mismatch with map.prp (That is
+    the only one) so i assume that the value in the prp file is more important (since the tdf value is the wrong one).
+    The values here fit the values in 'arcanum1.dat' under 'terrain/terrain.mes'
+    """
     original_type_format = "Q"
 
-    full_format = "<" + descriptors_header_format + sector_rows_format + sector_cols_format + original_type_format
+    full_format = "<" + sector_pointers_type_format + sector_rows_format + sector_cols_format + original_type_format
 
     parser = FileStruct(full_format)
 
-    def __init__(self, descriptors_type: int, sector_rows: int, sector_cols: int, original_type: int):
+    def __init__(self, sector_pointers_type: int, sector_rows: int, sector_cols: int, original_type: int):
 
-        self.descriptors_type = descriptors_type
+        self.sector_pointers_type = sector_pointers_type
 
         self.sector_rows = sector_rows
         self.sector_cols = sector_cols
@@ -64,79 +85,118 @@ class TerrainHeader(object):
     @classmethod
     def read_from(cls, terrain_file: io.FileIO) -> "TerrainHeader":
 
-        descriptors_header, sector_rows, sector_cols, original_type = \
-            cls.parser.unpack_from_file(terrain_file)
+        sector_pointers_type, sector_rows, sector_cols, original_type = cls.parser.unpack_from_file(terrain_file)
 
-        return TerrainHeader(descriptors_type=descriptors_header,
+        return TerrainHeader(sector_pointers_type=sector_pointers_type,
                              sector_rows=sector_rows, sector_cols=sector_cols,
                              original_type=original_type)
 
     def write_to(self, terrain_file: io.FileIO) -> None:
 
         # todo: save compressed data as well in some cases
-        if self.descriptors_type == self.DescriptorsType.no_descriptors:
-            descriptors_type = self.DescriptorsType.no_descriptors
+        if self.sector_pointers_type == self.SectorPointersType.no_pointers:
+            sector_pointers_type = self.SectorPointersType.no_pointers
         else:
-            descriptors_type = self.DescriptorsType.simple_descriptors
+            sector_pointers_type = self.SectorPointersType.simple_pointers
 
-        header_data = self.parser.pack(descriptors_type, self.sector_rows, self.sector_cols, self.original_type)
+        header_data = self.parser.pack(sector_pointers_type, self.sector_rows, self.sector_cols, self.original_type)
 
         terrain_file.write(header_data)
 
 
-class Descriptor(object):
+class SectorPointer(object):
 
-    # I don't know yet if the data is separated or together, and what it means.*[]
-    # todo: validate
-    index_and_terrain_type_format = "H"
+    class MixedTerrainCoordinates(object):
+        """
+        When dealing with mixed terrains the indexes are very complex, i think the binary meaning of the numbers
+        has a pattern but its not that important or interesting for me to figure out.
+        So instead we have this helper class that holds coordinates an a boolean that indicates whether to use the
+        map named after the from to transition (for example "green grasslands to water") or use the inverse transition
+        for example "water to green grasslands").
+        """
 
-    full_format = "<" + index_and_terrain_type_format
+        def __init__(self, row: int, col: int, is_inverse_map: bool):
+            self.row = row
+            self.col = col
+            self.is_inverse_map = is_inverse_map
 
+    """ Used to translate the mixed_terrain_index property to a descriptor that helps getting the actual sector """
+    # todo: Figure out why number 5 in "green grasslands to water" is different from "water to green grasslands"
+    mixed_index_to_coordinates = (
+        None,                                                         # 00
+        MixedTerrainCoordinates(row=1, col=0, is_inverse_map=False),  # 01
+        MixedTerrainCoordinates(row=1, col=2, is_inverse_map=False),  # 02
+        MixedTerrainCoordinates(row=1, col=1, is_inverse_map=False),  # 03
+        MixedTerrainCoordinates(row=3, col=2, is_inverse_map=False),  # 04
+        MixedTerrainCoordinates(row=0, col=0, is_inverse_map=False),  # 05
+        MixedTerrainCoordinates(row=2, col=2, is_inverse_map=False),  # 06
+        MixedTerrainCoordinates(row=3, col=0, is_inverse_map=True),   # 07
+        MixedTerrainCoordinates(row=3, col=0, is_inverse_map=False),  # 08
+        MixedTerrainCoordinates(row=2, col=0, is_inverse_map=False),  # 09
+        MixedTerrainCoordinates(row=0, col=0, is_inverse_map=True),   # 10
+        MixedTerrainCoordinates(row=3, col=2, is_inverse_map=True),   # 11
+        MixedTerrainCoordinates(row=3, col=1, is_inverse_map=False),  # 12
+        MixedTerrainCoordinates(row=1, col=2, is_inverse_map=True),   # 13
+        MixedTerrainCoordinates(row=1, col=0, is_inverse_map=True),   # 14
+    )
+
+    pointer_data_format = "H"
+
+    full_format = "<" + pointer_data_format
+
+    # For now only used for writing, parsing is done in bulks for efficiency reasons
+    # todo: remove me
     parser = FileStruct(full_format)
 
-    def __init__(self, index_and_terrain_type: int):
+    def __init__(self, pointer_data: int):
 
-        self.index_and_terrain_type = index_and_terrain_type
+        self.pointer_data = pointer_data
 
     @property
     def index(self) -> int:
-        return self.index_and_terrain_type & 0b111111
+        return self.pointer_data & 0b11
+
+    @property
+    def mixed_terrain_index(self) -> int:
+        """
+        This index is translated to coordinates with the 'mixed_index_to_coordinates' tuple.
+        """
+        return (self.pointer_data >> 2) & 0b1111
 
     @property
     def to_terrain_index(self) -> int:
-        return (self.index_and_terrain_type >> 6) & 0b11111
+        return (self.pointer_data >> 6) & 0b11111
 
     @property
     def from_terrain_index(self) -> int:
-        return (self.index_and_terrain_type >> 11) & 0b11111
+        return (self.pointer_data >> 11) & 0b11111
 
-    @property
-    def to_terrain(self) -> str:
-        return terrain_types[self.to_terrain_index]
+    def to_terrain_name(self) -> str:
+        return terrain_index_to_name[self.to_terrain_index]
 
-    @property
-    def from_terrain(self) -> str:
-        return terrain_types[self.from_terrain_index]
+    def from_terrain_name(self) -> str:
+        return terrain_index_to_name[self.from_terrain_index]
 
     def write_to(self, terrain_file: io.FileIO) -> None:
+        # todo: remove and write in bulks
 
-        descriptor_data = self.parser.pack(self.index_and_terrain_type)
+        sector_pointer_data = self.parser.pack(self.pointer_data)
 
-        terrain_file.write(descriptor_data)
+        terrain_file.write(sector_pointer_data)
 
 
 class Terrain(object):
 
-    compressed_descriptors_length_parser = FileStruct("<I")
-    raw_descriptor_type = numpy.uint16
+    compressed_sector_pointers_length_parser = FileStruct("<I")
+    raw_sector_pointer_type = numpy.uint16
 
-    def __init__(self, file_path: str, header: TerrainHeader, raw_descriptors: NumpyMatrix):
+    def __init__(self, file_path: str, header: TerrainHeader, raw_sector_pointers: NumpyMatrix):
 
         self.file_path = file_path
 
         self.header = header
 
-        self.raw_descriptors = raw_descriptors
+        self.raw_sector_pointers = raw_sector_pointers
 
     @property
     def cols(self) -> int:
@@ -147,19 +207,19 @@ class Terrain(object):
         return self.header.sector_rows
 
     @property
-    def has_descriptors(self) -> bool:
-        return self.header.descriptors_type != TerrainHeader.DescriptorsType.no_descriptors
+    def has_sector_pointers(self) -> bool:
+        return self.header.sector_pointers_type != TerrainHeader.SectorPointersType.no_pointers
 
     @property
-    def has_compressed_descriptors(self) -> bool:
-        return self.header.descriptors_type == TerrainHeader.DescriptorsType.compressed_descriptors
+    def has_compressed_sector_pointers(self) -> bool:
+        return self.header.sector_pointers_type == TerrainHeader.SectorPointersType.compressed_pointers
 
-    def __getitem__(self, row_col: Tuple[int, int]) -> Descriptor:
-        """ Returns a descriptor of the requested sector """
+    def __getitem__(self, row_col: Tuple[int, int]) -> SectorPointer:
+        """ Returns a pointer of the requested sector """
 
-        raw_descriptor = self.raw_descriptors[row_col]
+        raw_sector_pointer = self.raw_sector_pointers[row_col]
 
-        return Descriptor(raw_descriptor)
+        return SectorPointer(raw_sector_pointer)
 
     @classmethod
     def read(cls, terrain_file_path: str) -> "Terrain":
@@ -168,31 +228,31 @@ class Terrain(object):
 
             header = TerrainHeader.read_from(terrain_file)
 
-            if header.descriptors_type == TerrainHeader.DescriptorsType.no_descriptors:
+            if header.sector_pointers_type == TerrainHeader.SectorPointersType.no_pointers:
 
-                return Terrain(file_path=terrain_file_path, header=header, raw_descriptors=None)
+                return Terrain(file_path=terrain_file_path, header=header, raw_sector_pointers=None)
 
-            if header.descriptors_type == TerrainHeader.DescriptorsType.simple_descriptors:
+            if header.sector_pointers_type == TerrainHeader.SectorPointersType.simple_pointers:
 
-                raw_descriptors = numpy.fromfile(file=terrain_file, dtype=cls.raw_descriptor_type)  # type: NumpyMatrix
+                raw_pointers = numpy.fromfile(file=terrain_file, dtype=cls.raw_sector_pointer_type)  # type: NumpyMatrix
 
                 shape = (header.sector_cols, header.sector_rows)
-                raw_descriptors = raw_descriptors.reshape(shape).transpose()  # type: NumpyMatrix
+                raw_pointers = raw_pointers.reshape(shape).transpose()  # type: NumpyMatrix
 
-                return Terrain(file_path=terrain_file_path, header=header, raw_descriptors=raw_descriptors)
+                return Terrain(file_path=terrain_file_path, header=header, raw_sector_pointers=raw_pointers)
 
-            elif header.descriptors_type == TerrainHeader.DescriptorsType.compressed_descriptors:
+            elif header.sector_pointers_type == TerrainHeader.SectorPointersType.compressed_pointers:
 
-                uncompressed_descriptor_columns_iterator = cls._yield_uncompressed_descriptor_columns(
+                columns_iterator = cls._yield_uncompressed_sector_pointers_columns(
                     terrain_file=terrain_file, header=header)
 
-                raw_descriptors = numpy.stack(uncompressed_descriptor_columns_iterator).transpose()  # type: NumpyMatrix
+                raw_pointers = numpy.stack(columns_iterator).transpose()  # type: NumpyMatrix
 
-                return Terrain(file_path=terrain_file_path, header=header, raw_descriptors=raw_descriptors)
+                return Terrain(file_path=terrain_file_path, header=header, raw_sector_pointers=raw_pointers)
 
             else:
 
-                raise Exception("Bad descriptors header!")
+                raise Exception("Bad pointers type header!")
 
     def write(self, terrain_file_path: str) -> None:
 
@@ -200,7 +260,7 @@ class Terrain(object):
 
             self.header.write_to(terrain_file)
 
-            if not self.has_descriptors:
+            if not self.has_sector_pointers:
                 return
 
             for col in range(self.cols):
@@ -208,16 +268,16 @@ class Terrain(object):
                     self[row, col].write_to(terrain_file)
 
     @classmethod
-    def _yield_uncompressed_descriptor_columns(cls,
-                                               terrain_file: io.FileIO,
-                                               header: TerrainHeader) -> Iterator(numpy.ndarray):
+    def _yield_uncompressed_sector_pointers_columns(cls,
+                                                    terrain_file: io.FileIO,
+                                                    header: TerrainHeader) -> Iterator(numpy.ndarray):
 
         for _ in range(header.sector_cols):
 
-            col_compressed_data_length, = cls.compressed_descriptors_length_parser.unpack_from_file(terrain_file)
+            col_compressed_data_length, = cls.compressed_sector_pointers_length_parser.unpack_from_file(terrain_file)
 
             col_compressed_data = terrain_file.read(col_compressed_data_length)
 
             col_data = zlib.decompress(col_compressed_data)
 
-            yield numpy.frombuffer(buffer=col_data, dtype=cls.raw_descriptor_type)
+            yield numpy.frombuffer(buffer=col_data, dtype=cls.raw_sector_pointer_type)
