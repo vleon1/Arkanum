@@ -1,18 +1,17 @@
 from os import path
 from glob import glob
 
-from formats.map.tdf import Terrain
+from formats.map.sec import Sector
 
 from typing import List
 
-extension = ".tdf"
-validator_function = Terrain.read
-
+extension = ".sec"
+validator_function = Sector.read
 
 base_paths = glob(r"D:\Games\Arcanum")
 
 
-def validate_files(directory: str, validated_objects: List[Terrain]):
+def validate_files(directory: str, validated_objects: List[Sector]):
 
     template = path.join(directory, "*")
 
