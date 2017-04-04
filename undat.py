@@ -68,12 +68,11 @@ def extract_dat_file(dat_file_path: str, base_output_directory: str, list_only: 
             print("\t%s" % key)
             continue
 
-        key_output_path = path.join(output_directory, key)
+        key_output_path = path.join(output_directory, key.replace('\\', os.sep))
         key_output_directory = path.dirname(key_output_path)
 
         if not path.exists(key_output_directory):
             os.makedirs(key_output_directory)
-            pass
 
         output_data = dat[key]
         if not output_data:
@@ -125,7 +124,7 @@ def main(input_path: str, output_directory: str, list_only: bool, no_overwrite: 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Extracts the dat files of Arcanum.')
-    parser.add_argument('input_path', help='Either the Arcanum directory or a dat file path, if the folder is used it'
+    parser.add_argument('input_path', help='Either the Arcanum directory or a dat file path, if the folder is used it '
                                            'will extract all the dat files of the game')
     parser.add_argument('--output_path', help='The base path for output files. '
                                               'note that this path is assumed to be an arcanum folder '
