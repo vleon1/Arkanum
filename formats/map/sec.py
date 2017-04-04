@@ -2,7 +2,7 @@ from formats.helpers import FileStruct
 
 import io
 
-from typing import List, Any
+from typing import List, Any, Tuple
 
 
 class SectorLights(object):
@@ -14,6 +14,7 @@ class SectorLights(object):
     count_format = "<I"
     raw_format = "48s"
 
+    count_parser = FileStruct(count_format)
 
     def __init__(self, raw_lights: List[Any]):
 
@@ -28,11 +29,11 @@ class SectorLights(object):
     @classmethod
     def read_from(cls, sector_file: io.FileIO) -> "SectorLights":
 
-        count, = FileStruct.cached_unpack_from_file(cls.count_format, sector_file)
+        count, = cls.count_parser.unpack_from_file(sector_file)
 
         if (count > 0):
             fmt = "<" + cls.raw_format * count
-            raw_lights = FileStruct.cached_unpack_from_file(fmt, sector_file)
+            raw_lights = FileStruct(fmt).unpack_from_file(sector_file)
         else:
             raw_lights = []
 
@@ -41,11 +42,11 @@ class SectorLights(object):
     def write_to(self, sector_file: io.FileIO) -> None:
 
         count = len(self.raw_lights)
-        FileStruct.cached_pack_to_file(self.count_format, sector_file, count)
+        self.count_parser.pack_into_file(sector_file, count)
 
         if (count > 0):
             fmt = "<" + self.raw_format * count
-            FileStruct.cached_pack_to_file(fmt, sector_file, *self.raw_lights)
+            FileStruct(fmt).pack_into_file(sector_file, *self.raw_lights)
 
 
 class SectorTiles(object):
@@ -90,7 +91,7 @@ class SectorTiles(object):
 
     def write_to(self, sector_file: io.FileIO) -> None:
 
-        raw_tiles_data = self.raw_tiles_parser.pack_to_file(sector_file, *self.raw_tiles)
+        raw_tiles_data = self.raw_tiles_parser.pack_into_file(sector_file, *self.raw_tiles)
 
 
 class SectorRoofs(object):
@@ -99,9 +100,10 @@ class SectorRoofs(object):
     - Roof (4 bytes) * 256
     """
 
-    roofs_type_format = "<I"
+    type_format = "<I"
     raw_roofs_format = "<256I"
 
+    type_parser = FileStruct(type_format)
     raw_roofs_parser = FileStruct(raw_roofs_format)
 
     def __init__(self, type: int, raw_roofs: List[Any]):
@@ -120,23 +122,23 @@ class SectorRoofs(object):
     @classmethod
     def read_from(cls, sector_file: io.FileIO) -> "SectorRoofs":
 
-        roofs_type, = FileStruct.cached_unpack_from_file(cls.roofs_type_format, sector_file)
+        type, = cls.type_parser.unpack_from_file(sector_file)
 
-        if roofs_type == 0:
+        if type == 0:
             raw_roofs = cls.raw_roofs_parser.unpack_from_file(sector_file)
         else:
             raw_roofs = []
-        return SectorRoofs(type=roofs_type, raw_roofs=raw_roofs)
+        return SectorRoofs(type=type, raw_roofs=raw_roofs)
 
     def write_to(self, sector_file: io.FileIO) -> None:
 
-        FileStruct.cached_pack_to_file(self.roofs_type_format, sector_file, self.type)
+        self.type_parser.pack_into_file(sector_file, self.type)
 
         if self.type == 0:
-            FileStruct.cached_pack_to_file(self.raw_roofs_format, sector_file, *self.raw_roofs)
+            self.raw_roofs_parser.pack_into_file(sector_file, *self.raw_roofs)
 
 
-class SectorScripts(object):
+class SectorTileScripts(object):
     """
     Binary file format:
     - Tile scripts count (4 bytes)
@@ -146,8 +148,7 @@ class SectorScripts(object):
     - ? (4 bytes)
     - Index of tile in sector (2 bytes)
     - ? (2 bytes)
-    - Flags (3 bytes)
-    - ? (1 byte) 
+    - Flags (4 bytes)
     - Counters (4 bytes)
     - Script ID (4 bytes)
     - ? (4 bytes)
@@ -155,7 +156,9 @@ class SectorScripts(object):
     count_format = "<I"
     raw_format = "24s"
 
-    def __init__(self, raw_scripts: List[Any]):
+    count_parser = FileStruct(count_format)
+
+    def __init__(self, raw_scripts: List[Any]=[]):
 
         self.raw_scripts = raw_scripts
 
@@ -168,25 +171,25 @@ class SectorScripts(object):
         return self.raw_scripts[index]
 
     @classmethod
-    def read_from(cls, sector_file: io.FileIO) -> "SectorScripts":
+    def read_from(cls, sector_file: io.FileIO) -> "SectorTileScripts":
 
-        count, = FileStruct.cached_unpack_from_file(cls.count_format, sector_file)
+        count, = cls.count_parser.unpack_from_file(sector_file)
         if (count > 0):
             fmt = "<" + cls.raw_format * count
-            raw_scripts = FileStruct.cached_unpack_from_file(fmt, sector_file)
+            raw_scripts = FileStruct(fmt).unpack_from_file(sector_file)
         else:
             raw_scripts = []
 
-        return SectorScripts(raw_scripts=raw_scripts)
+        return SectorTileScripts(raw_scripts=raw_scripts)
 
     def write_to(self, sector_file: io.FileIO) -> None:
 
         count = len(self.raw_scripts)
-        count_data = FileStruct.cached_pack_to_file(self.count_format, sector_file, count)
+        count_data = self.count_parser.pack_into_file(sector_file, count)
 
         if (count > 0):
             fmt = "<" + self.raw_format * count
-            raw_data = FileStruct.cached_pack_to_file(fmt, sector_file, self.raw_scripts)
+            raw_data = FileStruct(fmt).pack_into_file(sector_file, *self.raw_scripts)
 
 class SectorBlockades(object):
     """
@@ -217,7 +220,7 @@ class SectorBlockades(object):
 
     def write_to(self, sector_file: io.FileIO) -> None:
 
-        self.raw_blockades_parser.pack_to_file(sector_file, self.raw_blockades)
+        self.raw_blockades_parser.pack_into_file(sector_file, self.raw_blockades)
 
 
 class SectorInfo(object):
@@ -229,61 +232,78 @@ class SectorInfo(object):
     type 0:
         - Nothing
     type 1:
-        - ? (4 bytes)
-    type 2:
-        - ? (16 bytes)    
-    type 3:
-        - ? (40 bytes)
-    type 4:
         - Script tile count (4 bytes)
             # List of tile scripts (n * 24 bytes)
-        - ? (4 bytes)
-        - ? (4 bytes)
-        - ? (4 bytes)
+    type 2:
+        - all of type 1 
+        - Sector Script Flags (4 bytes)
+        - Sector Script Counters (4 * 1 byte)
+        - Sector Script ID (4 bytes)
+    type 3:
+        - all of type 2
         - Town Map ID (4 bytes)
         - Magick/Tech aptitude (4 bytes signed)
-        - Light Scheme Override (4 bytes)
-        - ? (4 bytes)
+        - Light Scheme (4 bytes)
+        - NULL (4 bytes)
         - Music ID (4 bytes)
         - Ambient ID (4 bytes)
+    type 4: (Default, WorldEd always(?) saves as type 4)
+        - all of type 3
         - Blocked tile array (64 * 64 bits)
     """
 
-    type_format = "<I"
-
-    # Todo: Descriptive type names
     # Figure out whether unchanging bits have meaning
     class Type(object):
-        A = 11141120
-        B = 11141121
-        C = 11141122
-        D = 11141123
-        E = 11141124
+        NO_INFO      = 0x00AA0000
+        TILE_SCRIPTS = 0x00AA0001
+        ALL_SCRIPTS  = 0x00AA0002
+        BASIC        = 0x00AA0003
+        FULL         = 0x00AA0004
 
-        # A_format = ""
-        B_format = "<I"
-        C_format = "<4I"
-        D_format = "<10I"
-        E_format = "<4Ii4I512B"
+    type_format = "<I"
+    type_parser = FileStruct(type_format)
 
-        # A_parser = FileStruct(A_format)
-        B_parser = FileStruct(B_format)
-        C_parser = FileStruct(C_format)
-        D_parser = FileStruct(D_format)
-        E_parser = FileStruct(E_format)
+    script_flags_format = "I"
+    script_counters_format = "I"
+    script_id_format = "I"
+    sector_script_format = script_flags_format + script_counters_format + script_id_format
+
+    town_map_format = "I"
+    magick_aptitude_format = "i"
+    light_scheme_format = "I"
+    unknown_format = "I" # Always 0
+    music_format = "I"
+    ambient_format = "I"
+    blockades_format = "512B"
+
+    basic_format = (town_map_format + magick_aptitude_format + light_scheme_format +
+                    unknown_format + music_format + ambient_format)
+
+    sector_script_parser = FileStruct("<" + sector_script_format)
+    basic_parser = FileStruct("<" + sector_script_format + basic_format)
+    full_parser = FileStruct("<" + sector_script_format + basic_format + blockades_format)
+
     
-    def __init__(self, type: int=Type.E, scripts: SectorScripts=None, town_map: int=0, magick_aptitude: int=0,
-                 light_scheme: int=0, music: int=0, ambient: int=0, blockades: List[Any]=[]):
+    def __init__(self,
+                 type: int=Type.FULL,
+                 tile_scripts: SectorTileScripts=None,
+                 sector_script: (int, int, int)=(0,0,0),
+                 town_map: int=0,
+                 magick_aptitude: int=0,
+                 light_scheme: int=0,
+                 music: int=0,
+                 ambient: int=0,
+                 blockades: List[Any]=[]):
 
         self.type = type
-        self.scripts = scripts
+        self.tile_scripts = tile_scripts
+        self.sector_script = sector_script
         self.town_map = town_map
         self.magick_aptitude = magick_aptitude
         self.light_scheme = light_scheme
         self.music = music
         self.ambient = ambient
         self.blockades = blockades
-
 
 
     def __len__(self) -> int:
@@ -297,102 +317,85 @@ class SectorInfo(object):
     @classmethod
     def read_from(cls, sector_file: io.FileIO) -> "SectorBlockades":
 
-        type, = FileStruct.cached_unpack_from_file(cls.type_format, sector_file)
+        type, = cls.type_parser.unpack_from_file(sector_file)
 
+        if type == cls.Type.NO_INFO:
+            return SectorInfo(type=type)
 
-        # Todo: find out about types content
-        if type == cls.Type.A:
-            return SectorInfo(type=type)
-        elif type == cls.Type.B:
-            _ = cls.Type.B_parser.unpack_from_file(sector_file)
-            return SectorInfo(type=type)
-        elif type == cls.Type.C:
-            _ = cls.Type.C_parser.unpack_from_file(sector_file)
-            return SectorInfo(type=type)
-        elif type == cls.Type.D:
-            _ = cls.Type.D_parser.unpack_from_file(sector_file)
-            return SectorInfo(type=type)
-        elif type == cls.Type.E:
-            scripts = SectorScripts.read_from(sector_file)
-            (_, _, _, town_map, magick_aptitude, light_scheme, _, music, ambient, *blockades) = cls.Type.E_parser.unpack_from_file(sector_file)
-            return SectorInfo(type=type, scripts=scripts, town_map=town_map, magick_aptitude=magick_aptitude, light_scheme=light_scheme,
-                              music=music, ambient=ambient, blockades=blockades)
+        tile_scripts = SectorTileScripts.read_from(sector_file)
+
+        if type == cls.Type.TILE_SCRIPTS:
+            return SectorInfo(type=type, tile_scripts=tile_scripts)
+
+        elif type == cls.Type.ALL_SCRIPTS:  
+            sector_script = cls.sector_script_parser.unpack_from_file(sector_file)
+            return SectorInfo(type=type, tile_scripts=tile_scripts, sector_script=sector_script)
+
+        elif type == cls.Type.BASIC:
+            (sector_script_flags, sector_script_counters, sector_script_id, town_map,
+             magick_aptitude, light_scheme, _, music, ambient
+            ) = cls.basic_parser.unpack_from_file(sector_file)
+
+            sector_script = (sector_script_flags, sector_script_counters, sector_script_id)
+
+            return SectorInfo(type=type, tile_scripts=tile_scripts, sector_script=sector_script, 
+                              town_map=town_map, magick_aptitude=magick_aptitude,
+                              light_scheme=light_scheme, music=music, ambient=ambient)
+
+        elif type == cls.Type.FULL:
+            (sector_script_flags, sector_script_counters, sector_script_id, town_map,
+             magick_aptitude, light_scheme, _, music, ambient, *blockades
+            ) = cls.full_parser.unpack_from_file(sector_file)
+
+            sector_script = (sector_script_flags, sector_script_counters, sector_script_id)
+
+            return SectorInfo(type=type, tile_scripts=tile_scripts, sector_script=sector_script,
+                              town_map=town_map, magick_aptitude=magick_aptitude,
+                              light_scheme=light_scheme, music=music, ambient=ambient,
+                              blockades=blockades)
+
         else:
-            raise NotImplementedError("Can not handle type %d" % (type))
-        return
+            raise NotImplementedError("Can not handle unknown type %d" % (type))
 
     def write_to(self, sector_file: io.FileIO) -> None:
 
-        FileStruct.cached_pack_to_file(self.type_format, sector_file, self.type)
-        if self.type == self.Type.A:
+        self.type_parser.pack_into_file(sector_file, self.type)
+        if self.type == self.Type.NO_INFO:
             return
-        elif self.type == self.Type.B:
-            raise NotImplementedError()
-        elif self.type == self.Type.C:
-            raise NotImplementedError()
-        elif self.type == self.Type.D:
-            raise NotImplementedError()
-        elif self.type == self.Type.E:
-            # raise NotImplementedError()
-            self.scripts.write_to(sector_file)
-            self.Type.E_parser.pack_to_file(sector_file, 0, 0, 0, self.town_map, self.magick_aptitude, self.light_scheme, 0, self.music,
-                                            self.ambient, *self.blockades)
+
+        self.tile_scripts.write_to(sector_file)
+
+        if self.type == self.Type.ALL_SCRIPTS:  
+            self.sector_script_parser.pack_into_file(sector_file, *self.sector_script)
+
+        elif self.type == self.Type.BASIC:
+            self.basic_parser.pack_into_file(sector_file, *self.sector_script, self.town_map,
+                                             self.magick_aptitude, self.light_scheme, 0,
+                                             self.music, self.ambient)
+
+        elif self.type == self.Type.FULL:
+            self.full_parser.pack_into_file(sector_file, *self.sector_script, self.town_map,
+                                            self.magick_aptitude, self.light_scheme, 0,
+                                            self.music, self.ambient, *self.blockades)
 
 
 
 class Sector(object):
     """
     Binary file format (everything unsigned unless explicitly mentioned): 
-    - Light count (4 bytes)
-    - List of lights (n * 48 bytes)
-    - Array of 4096 tiles (64 * 64 * 4 bytes)
-    - Roof list type (4 bytes)
-        If roof list type == 0
-        - Array of 256 roofs (16 * 16 * 4 bytes)
-    - SectorInfo type (4 bytes)
-        If type == 0
-        - Nothing
-        If type == 1
-        - ? (4 bytes)
-        If type == 2
-        - ? (16 bytes)
-        if type == 3
-        - ? (40 bytes)
-        if type == 4
-        - Script tile count (4 bytes)
-            # List of tile scripts (n * 24 bytes)
-        - ? (4 bytes)
-        - ? (4 bytes)
-        - ? (4 bytes)
-        - Town Map ID (4 bytes)
-        - Magick/Tech aptitude (4 bytes signed)
-        - Light Scheme Override (4 bytes)
-        - ? (4 bytes)
-        - Music ID (4 bytes)
-        - Ambient ID (4 bytes)
-        - Blocked tile array (64 * 64 bits)
+    - Lights (4 bytes + count * 24 bytes)
+    - Tiles (4096 bytes)
+    - Roofs (1024 bytes)
+    - Info (4 bytes + varying bytes based on type)
     - ??? (unknown bytes)
         # some data structure of environment / walls / traps
         # Every(?) item starts with value 119 (4 bytes)
         # File ends with number of items in this construct (4 bytes)
         # Note: Item size is not constant; perhaps: (walls 83 bytes, other 87 bytes)
     """
-    unknown1_format = "I"
-    unknown2_format = "I"
-    unknown3_format = "I"
-    town_map_format = "I"
-    magick_aptitude_format = "i"
-    light_scheme_format = "I"
-    unknown4_format = "I"
-    music_format = "I"
-    ambient_format = "I"
 
-    combined_format = "<" + "".join([unknown1_format, unknown2_format, unknown3_format, town_map_format, magick_aptitude_format,
-                                     light_scheme_format, unknown4_format, music_format, ambient_format])
-
-    combined_parser = FileStruct(combined_format)
-
-    def __init__(self, file_path: str, lights: SectorLights, tiles: SectorTiles, roofs: SectorRoofs, info: SectorInfo):
+    def __init__(self, file_path: str, lights: SectorLights, tiles: SectorTiles, roofs: SectorRoofs,
+                 info: SectorInfo):
 
         self.file_path = file_path
         self.lights = lights
@@ -410,12 +413,13 @@ class Sector(object):
             roofs = SectorRoofs.read_from(sector_file)
             info = SectorInfo.read_from(sector_file)
 
-            _, = FileStruct.cached_unpack_from_file("<I", sector_file)
+            _, = FileStruct("<I").unpack_from_file(sector_file)
 
             # Todo:
                 # List of elements (environment, walls, traps, more?) of varying sizes
 
-            return Sector(file_path=sector_file_path, lights=lights, tiles=tiles, roofs=roofs, info=info)
+            return Sector(file_path=sector_file_path, lights=lights, tiles=tiles, roofs=roofs,
+                          info=info)
 
     def write(self, sector_file_path: str) -> None:
 
