@@ -14,6 +14,7 @@ class FileStruct(Struct):
         return self.unpack(raw_data)
 
     def pack_to_file(self, file: Union[io.FileIO, io.BufferedReader, io.BytesIO], *values) -> None:
+
         packed = self.pack(*values)
         file.write(packed)
 
@@ -33,9 +34,8 @@ class FileStruct(Struct):
     @classmethod
     def cached_pack(cls, fmt: str, *values) -> bytes:
 
-        return cls.get_cached_parser(fmt).pack(values)
+        return cls.get_cached_parser(fmt).pack(*values)
 
     @classmethod
     def cached_pack_to_file(cls, fmt:str, file: Union[io.FileIO, io.BufferedReader, io.BytesIO], *values) -> None:
-
-        cls.cached_pack_to_file(fmt, file, values)
+        return cls.get_cached_parser(fmt).pack_to_file(file, *values)
