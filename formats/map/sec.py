@@ -12,6 +12,7 @@ class SectorLights(object):
     - Light (48 bytes) * Light count
     """
     count_format = "<I"
+
     raw_format = "48s"
 
     count_parser = FileStruct(count_format)
@@ -21,9 +22,11 @@ class SectorLights(object):
         self.raw_lights = raw_lights
 
     def __len__(self) -> int:
+
         return len(self.raw_lights)
 
     def __getitem__(self, index: int) -> int:
+
         return self.raw_lights[index]
 
     @classmethod
@@ -73,9 +76,11 @@ class SectorTiles(object):
     raw_tiles_parser = FileStruct(raw_tiles_format)
 
     def __len__(self) -> int:
+
         return len(self.raw_tiles)
 
     def __getitem__(self, index: int) -> int:
+
         return self.raw_tiles[index]
 
     def __init__(self, raw_tiles: List[Any]):
@@ -96,7 +101,7 @@ class SectorTiles(object):
 
 class SectorRoofs(object):
     """
-    Binary file format:
+        Binary file format:
     - Roof (4 bytes) * 256
     """
 
@@ -128,6 +133,7 @@ class SectorRoofs(object):
             raw_roofs = cls.raw_roofs_parser.unpack_from_file(sector_file)
         else:
             raw_roofs = []
+
         return SectorRoofs(type=type, raw_roofs=raw_roofs)
 
     def write_to(self, sector_file: io.FileIO) -> None:
@@ -174,6 +180,7 @@ class SectorTileScripts(object):
     def read_from(cls, sector_file: io.FileIO) -> "SectorTileScripts":
 
         count, = cls.count_parser.unpack_from_file(sector_file)
+
         if (count > 0):
             fmt = "<" + cls.raw_format * count
             raw_scripts = FileStruct(fmt).unpack_from_file(sector_file)
@@ -315,7 +322,7 @@ class SectorInfo(object):
         return self.raw_blockades[index]
 
     @classmethod
-    def read_from(cls, sector_file: io.FileIO) -> "SectorBlockades":
+    def read_from(cls, sector_file: io.FileIO) -> "SectorInfo":
 
         type, = cls.type_parser.unpack_from_file(sector_file)
 
@@ -360,6 +367,7 @@ class SectorInfo(object):
     def write_to(self, sector_file: io.FileIO) -> None:
 
         self.type_parser.pack_into_file(sector_file, self.type)
+
         if self.type == self.Type.NO_INFO:
             return
 
@@ -379,6 +387,84 @@ class SectorInfo(object):
                                             self.music, self.ambient, *self.blockades)
 
 
+class SectorObjects(object):
+
+    # Format of each element is the same as in a .mob file
+    # Interestingly enough this allows to store .mob files in the .sec file
+
+    # Thus just as the .mob file convention all elements have a randomly
+    # name associated with them, e.g. G_
+    
+    # I assume the .mob file just makes the object "mobile".
+    # Weirdly enough, while items are stored in mobile files, traps are not.
+
+    # Each object has a loads of flags and possibly type fields which add additional fields, which
+    # makes the size of an object so unpredictable until the format is better understood.
+
+    # Most scenery objects just have an associated location and basic flags field
+    # Walls only location ?
+
+    header = 119
+    header_format = "<I"
+    header_parser = FileStruct(header_format)
+
+    # NOTE: formats with the unknonw prefix are just assumptions, might be untrue.
+    unknown1_format = "I"  # Always 1
+    unknown2_format = "Q"  # Unique per object (e.g. fire trap != arrow trap, but some arrow_trap == other arrow_trap)
+    unknown3_format = "I"  # Always 2
+    unknown4_format = "Q"  # Unique per object (same relation as unknown2)
+    unknown5_format = "Q"  # 0 or 2
+    unknown_identifier_format = "16s"  # Unique per entity # Translates to the G_ name probably
+    unknown_type_format = "I"  # 0 (wall), 3 (scenery), 10 (golem), 11 (trap)
+    unknown_length_format = "H"  # length of something
+    unknown_length2_format = "H"  # length of something or type (perhaps combine with former)
+    unknown_flags_format = "I"  # Indicates extra fields? 
+    unknown_flags2_format = "I"  # More extra fields?
+    unknown_flags3_format = "I"  # More extra fields?
+
+    # unknown_extra_fields_format = "?"
+
+    # Art changes, add two(?) more bytes
+    unknown_art_format = "I"
+    unknown_art_format = "I"
+    unknown_palette_format = "I"
+
+    # Basic scenery object has this as extra info..
+    col_format = "I"
+    row_format = "I"
+    offset_x_format = "i"  # Always follows location info, even if the object can not have an offset, e.g. a trap.
+    offset_y_format = "i" 
+    flags1_format = "I"
+
+    # Extra flags can be enabled with the unknown flags...
+    # Like:
+    resistance_format = "i" 
+    # Setting one resistance results in all of them being included explicitly, but
+    # some resistances add even more fields...
+
+
+
+    def __init__(self, raw_objects: List[Any]=[]):
+
+        self.raw_objects = raw_objects
+
+    @classmethod
+    def read_from(cls, sector_file: io.FileIO) -> "SectorInfo":
+
+        header, = cls.header_parser.unpack_from_file(sector_file)
+
+        while header == cls.header:
+            self.raw_objects.append()
+
+        return SectorObjects()
+
+    def write_to(self, sector_file: io.FileIO) -> None:
+
+        for obj in self.raw_objects:
+            self.header_parser.pack_into_file(sector_file, self.header)
+
+        self.header_parser.pack_into_file(sector_file, len(self.raw_objects))
+
 
 class Sector(object):
     """
@@ -387,21 +473,20 @@ class Sector(object):
     - Tiles (4096 bytes)
     - Roofs (1024 bytes)
     - Info (4 bytes + varying bytes based on type)
-    - ??? (unknown bytes)
-        # some data structure of environment / walls / traps
-        # Every(?) item starts with value 119 (4 bytes)
-        # File ends with number of items in this construct (4 bytes)
-        # Note: Item size is not constant; perhaps: (walls 83 bytes, other 87 bytes)
+    - Objects (varying bytes + 4 bytes)
+        - Since objects have varying sizes each needs to be read one by one.
+        - After all objects the file ends with the number of objects (4 bytes).
     """
 
     def __init__(self, file_path: str, lights: SectorLights, tiles: SectorTiles, roofs: SectorRoofs,
-                 info: SectorInfo):
+                 info: SectorInfo, objects: SectorObjects):
 
         self.file_path = file_path
         self.lights = lights
         self.tiles = tiles
         self.roofs = roofs
         self.info = info
+        self.objects = objects
 
     @classmethod
     def read(cls, sector_file_path: str) -> "Sector":
@@ -412,14 +497,10 @@ class Sector(object):
             tiles = SectorTiles.read_from(sector_file)
             roofs = SectorRoofs.read_from(sector_file)
             info = SectorInfo.read_from(sector_file)
-
-            _, = FileStruct("<I").unpack_from_file(sector_file)
-
-            # Todo:
-                # List of elements (environment, walls, traps, more?) of varying sizes
+            objects = SectorObjects.read_from(sector_file)
 
             return Sector(file_path=sector_file_path, lights=lights, tiles=tiles, roofs=roofs,
-                          info=info)
+                          info=info, objects=objects)
 
     def write(self, sector_file_path: str) -> None:
 
@@ -429,5 +510,7 @@ class Sector(object):
             self.tiles.write_to(sector_file)
             self.roofs.write_to(sector_file)
             self.info.write_to(sector_file)
+            self.objects.write_to(sector_file)
+
 
 
