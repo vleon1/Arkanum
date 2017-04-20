@@ -11,7 +11,10 @@ class MobileObject(Object):
 
         with open(mob_file_path, "rb") as mob_file:
 
-            return cls.read_from(mob_file)
+            mob = cls.read_from(mob_file)
+            mob.file_path = mob_file_path
+
+            return mob
 
     def write(self, mob_file_path: str) -> None:
 
