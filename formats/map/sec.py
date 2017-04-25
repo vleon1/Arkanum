@@ -1,4 +1,5 @@
 from formats.helpers import FileStruct
+from formats.obj import Object
 
 import io
 
@@ -389,81 +390,52 @@ class SectorInfo(object):
 
 class SectorObjects(object):
 
-    # Format of each element is the same as in a .mob file
-    # Interestingly enough this allows to store .mob files in the .sec file
+    length_format = "I"
+    length_parser = FileStruct("<" + length_format)
 
-    # Thus just as the .mob file convention all elements have a randomly
-    # name associated with them, e.g. G_
-    
-    # I assume the .mob file just makes the object "mobile".
-    # Weirdly enough, while items are stored in mobile files, traps are not.
+    def __init__(self, objects: List[Any]=[]):
 
-    # Each object has a loads of flags and possibly type fields which add additional fields, which
-    # makes the size of an object so unpredictable until the format is better understood.
+        self.objects = objects
 
-    # Most scenery objects just have an associated location and basic flags field
-    # Walls only location ?
+    def __len__(self):
+        return len(self.objects)
 
-    header = 119
-    header_format = "<I"
-    header_parser = FileStruct(header_format)
+    def __getitem__(self, index: int) -> Object:
+        return self.objects[index]
 
-    # NOTE: formats with the unknonw prefix are just assumptions, might be untrue.
-    unknown1_format = "I"  # Always 1
-    unknown2_format = "Q"  # Unique per object (e.g. fire trap != arrow trap, but some arrow_trap == other arrow_trap)
-    unknown3_format = "I"  # Always 2
-    unknown4_format = "Q"  # Unique per object (same relation as unknown2)
-    unknown5_format = "Q"  # 0 or 2
-    unknown_identifier_format = "16s"  # Unique per entity # Translates to the G_ name probably
-    unknown_type_format = "I"  # 0 (wall), 3 (scenery), 10 (golem), 11 (trap)
-    unknown_length_format = "H"  # length of something
-    unknown_length2_format = "H"  # length of something or type (perhaps combine with former)
-    unknown_flags_format = "I"  # Indicates extra fields? 
-    unknown_flags2_format = "I"  # More extra fields?
-    unknown_flags3_format = "I"  # More extra fields?
-
-    # unknown_extra_fields_format = "?"
-
-    # Art changes, add two(?) more bytes
-    unknown_art_format = "I"
-    unknown_art_format = "I"
-    unknown_palette_format = "I"
-
-    # Basic scenery object has this as extra info..
-    col_format = "I"
-    row_format = "I"
-    offset_x_format = "i"  # Always follows location info, even if the object can not have an offset, e.g. a trap.
-    offset_y_format = "i" 
-    flags1_format = "I"
-
-    # Extra flags can be enabled with the unknown flags...
-    # Like:
-    resistance_format = "i" 
-    # Setting one resistance results in all of them being included explicitly, but
-    # some resistances add even more fields...
-
-
-
-    def __init__(self, raw_objects: List[Any]=[]):
-
-        self.raw_objects = raw_objects
+    def __iter__(self):
+        return iter(self.objects)
 
     @classmethod
     def read_from(cls, sector_file: io.FileIO) -> "SectorInfo":
 
-        header, = cls.header_parser.unpack_from_file(sector_file)
+        # Save current position in file
+        tell = sector_file.tell()
 
-        while header == cls.header:
-            self.raw_objects.append()
+        # Go to end of file minus size of length.
+        sector_file.seek(-cls.length_parser.size, 2)
 
-        return SectorObjects()
+        length,  = cls.length_parser.unpack_from_file(sector_file)
+
+        print(length)
+
+        objects = []
+
+        if length:
+            # Go back to saved position
+            sector_file.seek(tell)
+
+            for _ in range(length):
+                objects.append(Object.read_from(sector_file))
+
+        return SectorObjects(objects=objects)
 
     def write_to(self, sector_file: io.FileIO) -> None:
 
-        for obj in self.raw_objects:
-            self.header_parser.pack_into_file(sector_file, self.header)
+        for obj in self:
+            obj.write_to(sector_file)
 
-        self.header_parser.pack_into_file(sector_file, len(self.raw_objects))
+        self.length_parser.pack_into_file(sector_file, len(self))
 
 
 class Sector(object):
