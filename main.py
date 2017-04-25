@@ -1,18 +1,19 @@
 from os import path
 from glob import glob
 
-from formats.map.tdf import Terrain
+from formats.map.sec import Sector
 
 from typing import List
+import tempfile
 
-extension = ".tdf"
-validator_function = Terrain.read
+extension = ".sec"
+validator_function = Sector.read
+
+# base_paths = glob(r"D:\Games\Arcanum")
+base_paths = glob(r"/home/sebastian/.wine/drive_c/GOG Games/Arcanum/modules/Arcanum/maps/")
 
 
-base_paths = glob(r"D:\Games\Arcanum")
-
-
-def validate_files(directory: str, validated_objects: List[Terrain]):
+def validate_files(directory: str, validated_objects: List[Sector]):
 
     template = path.join(directory, "*")
 
@@ -22,6 +23,7 @@ def validate_files(directory: str, validated_objects: List[Terrain]):
             validate_files(file_path, validated_objects)
 
         elif file_path.lower().endswith(extension):
+                
             print("Validating %s.." % file_path)
             validated_object = validator_function(file_path)
             validated_objects.append(validated_object)
@@ -35,9 +37,13 @@ def main():
         validate_files(base_path, validated_objects)
 
     print(flush=True)
+
+    tmp_path = tempfile.mkstemp()[1]
+
     for validated_object in validated_objects:
 
         print("Further validation of %s.." % validated_object.file_path, flush=True)
+        validated_object.write(tmp_path)
 
 
 if __name__ == "__main__":
