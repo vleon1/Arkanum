@@ -1,138 +1,100 @@
-from formats.scr import parameters
-from formats.scr import actions
+"""This module defines the format and parsing of script files."""
+from formats.helpers import FileStruct
+from formats.scr.lines import Line
+from typing import List, Optional
 
 
 class Script(object):
-    """The class describes a simple runnable script inside the game of Arcanum.
+    """The class describes the format and serialization of a script.
 
     A Script contains a header with basic information and a series of lines.
-    Each line needs a callback to some game state variables, e.g. global flags
-    or scenery in vicinity. Scripts are stored as files with the extension
-    ".scr".
+    Scripts are stored as files with the extension ".scr".
 
     Attributes:
-        pc: The program counter or current line number of the script.
-        lines: A list of lines that belong to the script.
-        dialog: The dialog that is attached to the script.
-        loop_objects: Objects to be looped over.
-        loop_start: Line number where the current loop starts.\
-        flags: Local flags of the script.
     """
 
-    # .scr format is something like this:
-    # 4 bytes- varflags
-    # 4 bytes - counters
-    # 38 bytes - description
-    # 2 bytes - ?
-    # 2 bytes - scriptflags
-    # 2 bytes - ? probably unused scriptflags
-    # 4 bytes - number of lines
-    # 8 bytes - ?
-    # num_lines * 132 bytes - Array of lines
+    flags_format = "4B"
+    counters_format = "4B"
+    description_format = "40s"
+    script_flags_format = "4B"
+    num_lines_format = "I"
+    unknown_data_format = "8B"
+    full_format = (
+        "<" + flags_format + counters_format + description_format +
+        script_flags_format + num_lines_format + unknown_data_format)
 
-    class Line(object):
-        """A Line is single command called by a Script.
+    parser = FileStruct(full_format)
 
-        A line is made up out of three parts.
-        * A condition that is either true or false.
-        * An action that will be executed if the condition is true.
-        * An action that will be executed if the condition is false.
+    def __init__(self,
+                 file_path: str,
+                 flags: Optional[List[int]]=None,
+                 counters: Optional[List[int]]=None,
+                 description: str="",
+                 script_flags: Optional[List[int]]=None,
+                 lines: Optional[List["Line"]]=None,
+                 *args,
+                 **kwargs):
+        """Initialize the script.
 
-        Attributes:
-            condition: A function that will be evaluated to decide which action
-                to run.
-            action: The function that will be called if the condition evaluates
-                to true.
-            params: A list of parameters that will be passed to action.
-            else_action: The function that will be called if the condition
-                evaluates to false.
-            else_params: A list of parametsr that will be passed to
-                else_action.
+        Arguments:
+            file_path: Path to the script.
+            flags: Local flag variables.
+            counters: Local counter variables.
+            description: Short description of the script.
+            script_flags: Flag settings.
+            lines: A list of script lines.
         """
+        self.file_path = file_path
+        self.flags = flags if flags else [0] * 4
+        self.counters = counters if counters else [0] * 4
+        self.description = description
+        self.script_flags = script_flags if script_flags else [0] * 4
+        self.lines = lines if lines else []
 
-        # serialized format is:
-        # 4 bytes - condition code
-        # 8 * 1 byte - param type
-        # 8 * 4 bytes - param value
-        # 4 bytes - if action code
-        # 8 * 1 byte - param type
-        # 8 * 4 bytes - param value
-        # 4 bytes - then action code
-        # 8 * 1 byte - param type
-        # 8 * 4 bytes - param value
+        # TODO: Identifiy unknown data
+        self.unknown = {'args': args, 'kwargs': kwargs}
 
-        def __init__(self,
-                     condition=None,
-                     action=None,
-                     params=None,
-                     else_action=None,
-                     else_params=None):
-            """Initializes a line object.
+    @classmethod
+    def read(cls, script_file_path: str) -> "Script":
+        """Deserialize the file with the given path into a Script object.
 
-            All arguments are optional. A undefined condition will always
-            evaluate to true, thus in that case the else action will never be
-            called. Actions that are undefined simply do nothing.
-
-            Args:
-                condition: A callable object that is evaluated each time the
-                    line is executed to decide which action to run.
-                action: A callable function that will be called when the the
-                    line is executed and condition evaluated to true.
-                params: A list of parameters that will be passed to action.
-                else_action: A callable function that will be called when the
-                	line is executed and the condition is evaluated to false.
-                else_params: A list of parameters that will be passed to
-                    else_action.
-
-            """
-            self.action = action if action else actions.Action.do_nothing
-            self.params = params if params else []
-            self.condition = condition if condition else actions.Condition.true
-            self.else_action = (else_action
-                                if else_action else actions.Action.do_nothing)
-            self.else_params = else_params if params else []
-
-        def __call__(self, script):
-            """Evaluate the condition and run the required action.
-
-            Args:
-                script: The script which runs this line.
-            """
-            if self.enabled:
-                return self.action(*self.params, script=script)
-            else:
-                return self.else_action(*self.else_params, script=script)
-
-        @property
-        def enabled(self):
-            return self.condition()
-
-    def __init__(self):
-        self.pc = 0
-        self.lines = None
-        self.dialog = None
-        self.loop_objects = []
-        self.loop_start = None
-        self.flags = [False] * 4 * 8  # TODO: Create enum for this.
-
-    def __call__(self, line=None):
-        """Run the script starting at the current program counter or at
-        specified line number.
-
-        Args:
-            line: Optional line number at which the script should start
-                excecution.
+        Arguments:
+            script_file_path: Script file to deserialize.
         """
-        if line:
-            self.pc = line
-        while True:
-            res = self.lines[self.pc](self)
-            if res == actions.ReturnCode.end:
-                # TODO: Implement default return behaviour
-                return
-            elif res == actions.ReturnCode.end_skip:
-                return
-            elif res == actions.ReturnCode.goto_next:
-                self.pc += 1
-            else:
-                self.pc = res.value
+        with open(script_file_path, "rb") as script_file:
+
+            header = cls.parser.unpack_from_file(script_file)
+            flags = header[:4]
+            counters = header[4:8]
+            description = header[8][:header[8].index(b"\x00")].decode()
+            script_flags = header[9:13]
+            num_lines = header[13]
+            unknown_data = header[14:]
+
+            lines = []
+            for line in range(num_lines):
+                lines.append(Line.read_from(script_file))
+
+            return cls(
+                file_path=script_file_path,
+                flags=flags,
+                counters=counters,
+                description=description,
+                script_flags=script_flags,
+                lines=lines,
+                unknown_data=unknown_data)
+
+    def write(self, script_file_path: str) -> None:
+        """Serialize the script in to a file at the given path.
+
+        Arguments:
+            script_file_path: The path where the file should be written.
+        """
+        with open(script_file_path, "wb") as script_file:
+
+            header = (*self.flags, *self.counters, self.description.encode(),
+                      *self.script_flags, len(self.lines),
+                      *self.unknown['kwargs']['unknown_data'])
+            self.parser.pack_into_file(script_file, *header)
+            for line in self.lines:
+                line.write_to(script_file)
