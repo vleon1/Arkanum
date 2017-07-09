@@ -11,6 +11,12 @@ class Script(object):
     Scripts are stored as files with the extension ".scr".
 
     Attributes:
+        file_path: Path to the file of the script.
+        flags: Local flags of the script.
+        counters: Local counters of  the sfcript.
+        description: A description of the script.
+        script_flags: Flags / settings of the script.
+        lines: A list of script lines.
     """
 
     flags_format = "4B"

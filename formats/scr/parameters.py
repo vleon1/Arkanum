@@ -1,6 +1,6 @@
 """This module defines parameters required by script lines."""
 import enum
-from typing import Optional
+from typing import Optional, SupportsInt, Any
 from formats.helpers import name
 
 
@@ -109,13 +109,13 @@ class Number(Parameter):
             raise NotImplementedError
 
     @value.setter
-    def value(self, new_value):
+    def value(self, new_value: SupportsInt):
         if self.type == Number.Type.number:
             self.variable = int(new_value)
         else:
             raise NotImplementedError
 
-    def assign(self, new_value):
+    def assign(self, new_value: SupportsInt):
         """Assign a new value to the number."""
         self.value = new_value
 
@@ -123,55 +123,55 @@ class Number(Parameter):
         """Return the number as an int."""
         return int(self.value)
 
-    def __add__(self, other):
+    def __add__(self, other: Any):
         """Same as 'self.value + other'."""
         return self.value + other
 
-    def __radd__(self, other):
+    def __radd__(self, other: Any):
         """Same as 'other + self.value'."""
         return other + self.value
 
-    def __sub__(self, other):
+    def __sub__(self, other: Any):
         """Same as 'self.value - other'."""
         return self.value - other
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: Any):
         """Same as 'other - self.value'."""
         return other - self.value
 
-    def __mul__(self, other):
+    def __mul__(self, other: Any):
         """Same as 'self.value * other'."""
         return self.value * other
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: Any):
         """Same as 'other * self.value'."""
         return other * self.value
 
-    def __floordiv__(self, other):
+    def __floordiv__(self, other: Any):
         """Same as 'self.value // other'."""
         return self.value // other
 
-    def __rfloordiv__(self, other):
+    def __rfloordiv__(self, other: Any):
         """Same as 'other // self.value'."""
         return other // self.value
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         """Same as 'self.value == other'."""
         return self.value == other
 
-    def __le__(self, other):
+    def __le__(self, other: Any):
         """Same as 'self.value <= other'."""
         return self.value <= other
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any):
         """Same as 'self.value < other'."""
         return self.value < other
 
-    def __ge__(self, other):
+    def __ge__(self, other: Any):
         """Same as 'self.value >= other'."""
         return self.value >= other
 
-    def __gt__(self, other):
+    def __gt__(self, other: Any):
         """Same as 'self.value > other'."""
         return self.value > other
 
