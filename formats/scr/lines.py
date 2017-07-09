@@ -356,7 +356,7 @@ class Line(object):
         def pack_params(params):
             remainder = [0] * (8 - len(params))
             types = [p.type.value for p in params]
-            values = [p.variable for p in params]
+            values = [p.value for p in params]
             return (*types, *remainder, *values, *remainder)
 
         raw_data = (self.condition.value, *pack_params(self.condition_params),
