@@ -24,10 +24,10 @@ class Script(object):
     description_format = "40s"
     script_flags_format = "4B"
     num_lines_format = "I"
-    unknown_data_format = "4B"
+    stamp_format = "I"
     full_format = "<{}{}{}{}2{}{}".format(
         flags_format, counters_format, description_format, script_flags_format,
-        num_lines_format, unknown_data_format)
+        num_lines_format, stamp_format)
 
     parser = FileStruct(full_format)
 
@@ -37,9 +37,7 @@ class Script(object):
                  counters: Optional[List[int]]=None,
                  description: str="",
                  script_flags: Optional[List[int]]=None,
-                 lines: Optional[List["Line"]]=None,
-                 *args,
-                 **kwargs):
+                 lines: Optional[List["Line"]]=None):
         """Initialize the script.
 
         Arguments:
@@ -56,9 +54,6 @@ class Script(object):
         self.description = description
         self.script_flags = script_flags if script_flags else [0] * 4
         self.lines = lines if lines else []
-
-        # TODO: Identifiy unknown data
-        self.unknown = {'args': args, 'kwargs': kwargs}
 
     @classmethod
     def read(cls, script_file_path: str) -> "Script":
@@ -78,8 +73,6 @@ class Script(object):
             description = header[8][:header[8].index(b"\x00")].decode()
             script_flags = header[9:13]
             num_lines = header[13]
-            num_lines_ceil = header[14]  # NOQA useless
-            unknown_data = header[15:]
 
             lines = []
             for line in range(num_lines):
@@ -91,8 +84,7 @@ class Script(object):
                 counters=counters,
                 description=description,
                 script_flags=script_flags,
-                lines=lines,
-                unknown_data=unknown_data)
+                lines=lines)
 
     def write(self, script_file_path: str) -> None:
         """Serialize the script in to a file at the given path.
@@ -104,8 +96,7 @@ class Script(object):
 
             header = (*self.flags, *self.counters, self.description.encode(),
                       *self.script_flags, len(self.lines),
-                      ((len(self.lines) + 9) // 10 * 10),
-                      *self.unknown['kwargs']['unknown_data'])
+                      ((len(self.lines) + 9) // 10 * 10), 0)
             self.parser.pack_into_file(script_file, *header)
             for line in self.lines:
                 line.write_to(script_file)
