@@ -17,7 +17,7 @@ class Object(Parameter):
     to a specific script Action.
     """
 
-    @name("Object.Type")
+    @name("ObjectType")
     class Type(enum.Enum):
         """The type of the object parameter."""
 
@@ -62,7 +62,7 @@ class Object(Parameter):
         The format of the returned string is:
         "Object(type, value)"
         """
-        return "Number({}, {})".format(self.type, self.value)
+        return "Object({}, {})".format(self.type.name, self.value)
 
 
 class Number(Parameter):
@@ -76,7 +76,7 @@ class Number(Parameter):
         value: Internal value or reference.
     """
 
-    @name("Number.Type")
+    @name("NumberType")
     class Type(enum.Enum):
         """The type of the number parameter."""
 
@@ -108,4 +108,4 @@ class Number(Parameter):
         Returns:
             String with format "Number(type, value)"
         """
-        return "Number({}, {})".format(self.type, self.value)
+        return "Number({}, {})".format(self.type.name, self.value)

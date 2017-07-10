@@ -24,10 +24,10 @@ class Script(object):
     description_format = "40s"
     script_flags_format = "4B"
     num_lines_format = "I"
-    unknown_data_format = "8B"
-    full_format = (
-        "<" + flags_format + counters_format + description_format +
-        script_flags_format + num_lines_format + unknown_data_format)
+    unknown_data_format = "4B"
+    full_format = "<{}{}{}{}2{}{}".format(
+        flags_format, counters_format, description_format, script_flags_format,
+        num_lines_format, unknown_data_format)
 
     parser = FileStruct(full_format)
 
@@ -78,7 +78,8 @@ class Script(object):
             description = header[8][:header[8].index(b"\x00")].decode()
             script_flags = header[9:13]
             num_lines = header[13]
-            unknown_data = header[14:]
+            num_lines_ceil = header[14]  # NOQA useless
+            unknown_data = header[15:]
 
             lines = []
             for line in range(num_lines):
@@ -103,6 +104,7 @@ class Script(object):
 
             header = (*self.flags, *self.counters, self.description.encode(),
                       *self.script_flags, len(self.lines),
+                      ((len(self.lines) + 9) // 10 * 10),
                       *self.unknown['kwargs']['unknown_data'])
             self.parser.pack_into_file(script_file, *header)
             for line in self.lines:

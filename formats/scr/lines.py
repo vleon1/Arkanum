@@ -356,6 +356,7 @@ class Line(object):
         Arguments:
             script_file: An open script file.
         """
+
         def pack_params(params):
             remainder = [0] * (8 - len(params))
             types = [p.type.value for p in params]
@@ -368,3 +369,19 @@ class Line(object):
                     *pack_params(self.else_action_params))
 
         self.parser.pack_into_file(script_file, *raw_data)
+
+    def __str__(self) -> str:
+        """Return line in readable format.
+
+        Returns:
+            The line as a readable string.
+        """
+        action_str = "{}{}".format(self.action.name, self.action_params)
+        condition_str = " if {}{}".format(
+            self.condition.name,
+            self.condition_params) if self.condition != Condition.true else ""
+        else_str = " else {}{}".format(
+            self.else_action.name, self.else_action_params
+        ) if self.else_action != Action.do_nothing else ""
+
+        return "{}{}{}".format(action_str, condition_str, else_str)
