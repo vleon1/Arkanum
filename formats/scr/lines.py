@@ -322,6 +322,9 @@ class Line(object):
 
         Arguments:
             script_file: An open script file.
+
+        Returns:
+            New Script Line object.
         """
         raw_data = cls.parser.unpack_from_file(script_file)
 

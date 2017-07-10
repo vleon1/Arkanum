@@ -102,10 +102,10 @@ class Number(Parameter):
         self.type = type
         self.value = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return a readable representation of the number.
 
-        The format of the returned string is:
-        "Number(type, value)"
+        Returns:
+            String with format "Number(type, value)"
         """
         return "Number({}, {})".format(self.type, self.value)

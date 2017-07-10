@@ -66,6 +66,9 @@ class Script(object):
 
         Arguments:
             script_file_path: Script file to deserialize.
+
+        Returns:
+            New Script object.
         """
         with open(script_file_path, "rb") as script_file:
 
