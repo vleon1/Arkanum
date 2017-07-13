@@ -17,6 +17,7 @@ class Object(Parameter):
     to a specific script Action.
     """
 
+    @enum.unique
     @name("ObjectType")
     class Type(enum.Enum):
         """The type of the object parameter."""
@@ -76,6 +77,7 @@ class Number(Parameter):
         value: Internal value or reference.
     """
 
+    @enum.unique
     @name("NumberType")
     class Type(enum.Enum):
         """The type of the number parameter."""

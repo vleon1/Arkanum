@@ -73,6 +73,8 @@ class Script(object):
             description = header[8][:header[8].index(b"\x00")].decode()
             script_flags = header[9:13]
             num_lines = header[13]
+            num_lines_ceil = header[14]  # NOQA useless
+            stamp = header[15]  # NOQA useless
 
             lines = []
             for line in range(num_lines):

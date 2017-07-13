@@ -1,4 +1,5 @@
 """This modules defines the format and parsing of a line in a script file."""
+import enum
 from formats.helpers import IntEnumPlus, FileStruct
 from formats.scr.parameters import Number, Object, Parameter
 from typing import Any, Iterable, Optional
@@ -25,6 +26,7 @@ _PARAMS_OON = (Object, Object, Number)
 _PARAMS_OOONN = (Object, Object, Object, Number, Number)
 
 
+@enum.unique
 class Action(IntEnumPlus):
     """The enum defines the actions of scripts with the parameters they take.
 
@@ -184,6 +186,7 @@ class Action(IntEnumPlus):
         self.params = parameters
 
 
+@enum.unique
 class Condition(IntEnumPlus):
     """Defines a condition on a script line.
 
@@ -356,7 +359,6 @@ class Line(object):
         Arguments:
             script_file: An open script file.
         """
-
         def pack_params(params):
             remainder = [0] * (8 - len(params))
             types = [p.type.value for p in params]
