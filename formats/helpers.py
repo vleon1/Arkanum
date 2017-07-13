@@ -2,6 +2,8 @@ from struct import Struct
 
 from typing import List, Any, Union
 import io
+import enum
+
 
 class FileStruct(Struct):
 
@@ -14,3 +16,25 @@ class FileStruct(Struct):
 
         packed = self.pack(*values)
         file.write(packed)
+
+
+class IntEnumPlus(enum.IntEnum):
+    """IntEnum whose constructor can take additional attributes.
+
+    The implementation allows for additional attributes that do not affect the
+    logical value of the enum.
+    """
+
+    def __new__(cls, value: int, *args: List[Any]) -> "IntEnumPlus":
+        """Instantiate a new member."""
+        obj = int.__new__(cls, value)
+        obj._value_ = value
+        return obj
+
+
+def name(name):
+    """Give a class a different name."""
+    def decorator(cls):
+        cls.__name__ = name
+        return cls
+    return decorator
